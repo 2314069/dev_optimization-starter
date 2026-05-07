@@ -1,0 +1,2334 @@
+import React, { useState, useMemo } from 'react';
+
+/* ============================================================
+ *  数理最適化を、遊ぶ — 初心者向けインタラクティブ学習アプリ
+ *  4 modules: LP / Knapsack / Transportation / Shift Scheduling
+ * ============================================================ */
+
+// === Theme ============================================================
+const C = {
+  // 地 / page
+  page: '#ffffff',
+  pageEdge: '#e8e6e0',
+
+  // 紙 / paper notes
+  paper: '#fbf6e8',
+  paperLight: '#fdfaef',
+  paperDark: '#ece2c0',
+  paperEdge: '#d6c899',
+  ink: '#1a1812',
+  inkSoft: '#3d352a',
+  inkLight: '#7a7062',
+  inkLighter: '#bdb39e',
+  rule: '#dccfa0',
+  margin: '#b94c4a',          // ノート赤マージン
+  rule2: '#7a9bb5',           // ノート横罫
+  grid: '#e6dcbd',
+  gridDark: '#cdbf95',
+
+  // インク色 / 5色構成 (red, blue, green, orange + ink)
+  red: '#a93128',
+  redLight: '#f1d6d3',
+  redDeep: '#691918',
+  blue: '#1d4664',
+  blueLight: '#d4dee8',
+  blueDeep: '#0c2436',
+  yellow: '#cb6a14',          // 橙系に変更
+  yellowLight: '#fae5c5',
+  yellowDeep: '#6b3a08',
+  green: '#345a3b',
+  greenLight: '#d4e4cf',
+  greenDeep: '#1b3020',
+
+  // ホワイトボード / whiteboard
+  board: '#fafafa',           // 盤面
+  boardLight: '#ffffff',
+  boardDeep: '#e6e8ec',
+  frame: '#aab0b8',           // アルミ枠
+  frameDark: '#6c7178',
+  frameLight: '#c9cdd2',
+  chalk: '#1a1812',           // 黒マーカー（本文）
+  chalkSoft: '#555b62',       // グレー（補足）
+  chalkFaint: '#989ea4',      // 淡グレー（最も控えめ）
+  chalkYellow: '#d97a14',     // 橙マーカー（最適ハイライト・等高線）
+  chalkPink: '#d2342a',       // 赤マーカー
+  chalkBlue: '#1f5fb5',       // 青マーカー
+  chalkGreen: '#2a8543',      // 緑マーカー
+};
+
+const F_DISP = '"Klee One", "Hiragino Mincho ProN", "Yu Mincho", serif';
+const F_BODY = '"Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif';
+const F_MONO = '"JetBrains Mono", "SF Mono", ui-monospace, monospace';
+
+// === Tiny UI primitives ==============================================
+
+function Tag({ children, color = C.ink, bg = C.paperDark }) {
+  return (
+    <span
+      className="inline-block px-2 py-0.5 text-xs tracking-wider uppercase"
+      style={{ fontFamily: F_MONO, color, background: bg, borderRadius: 2 }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({ children, style, className = '', accent }) {
+  return (
+    <div
+      className={`relative ${className}`}
+      style={{
+        background: C.paperLight,
+        border: `1px solid ${C.rule}`,
+        boxShadow: `4px 4px 0 ${C.paperDark}`,
+        padding: '1.25rem',
+        ...style,
+      }}
+    >
+      {accent && (
+        <div
+          style={{
+            position: 'absolute', top: 0, left: 0, height: 4, width: 56,
+            background: accent,
+          }}
+        />
+      )}
+      {children}
+    </div>
+  );
+}
+
+function Btn({ children, onClick, variant = 'primary', size = 'md' }) {
+  const variants = {
+    primary: { bg: C.ink, fg: C.paper, border: C.ink },
+    ghost:   { bg: 'transparent', fg: C.ink, border: C.ink },
+    danger:  { bg: C.red, fg: C.paper, border: C.red },
+    soft:    { bg: C.paperDark, fg: C.ink, border: C.gridDark },
+  };
+  const v = variants[variant];
+  const padY = size === 'sm' ? '0.35rem' : '0.6rem';
+  const padX = size === 'sm' ? '0.7rem' : '1.1rem';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: v.bg, color: v.fg, border: `1.5px solid ${v.border}`,
+        padding: `${padY} ${padX}`,
+        fontFamily: F_MONO,
+        fontSize: size === 'sm' ? 12 : 13,
+        letterSpacing: '0.05em',
+        cursor: 'pointer',
+        transition: 'transform 0.08s ease',
+      }}
+      onMouseDown={(e) => (e.currentTarget.style.transform = 'translate(2px,2px)')}
+      onMouseUp={(e) => (e.currentTarget.style.transform = 'translate(0,0)')}
+      onMouseLeave={(e) => (e.currentTarget.style.transform = 'translate(0,0)')}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Slider({ label, value, onChange, min, max, step = 1, suffix = '', color = C.blue }) {
+  return (
+    <label className="block">
+      <div className="flex justify-between items-baseline mb-1">
+        <span style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft }}>{label}</span>
+        <span style={{ fontFamily: F_MONO, fontSize: 14, color: C.ink, fontWeight: 500 }}>
+          {value}{suffix}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(+e.target.value)}
+        style={{ width: '100%', accentColor: color }}
+      />
+    </label>
+  );
+}
+
+function Equation({ children, label = 'WHITEBOARD' }) {
+  return (
+    <div
+      style={{
+        background: C.frame,
+        backgroundImage: `linear-gradient(180deg, ${C.frameLight} 0%, ${C.frame} 35%, ${C.frame} 65%, ${C.frameDark} 100%)`,
+        padding: '6px',
+        borderRadius: 4,
+        position: 'relative',
+        boxShadow: `2px 3px 0 ${C.pageEdge}, inset 0 0 0 1px ${C.frameDark}`,
+      }}
+    >
+      <div
+        style={{
+          background: C.board,
+          color: C.chalk,
+          fontFamily: F_MONO, fontSize: 14,
+          padding: '1.1rem 1.3rem 1.2rem',
+          letterSpacing: '0.02em',
+          position: 'relative',
+          boxShadow: `inset 0 1px 0 ${C.boardDeep}80`,
+        }}
+      >
+        {label && (
+          <div
+            style={{
+              position: 'absolute', top: 8, right: 12,
+              fontFamily: F_MONO, fontSize: 9,
+              color: C.chalkFaint, letterSpacing: '0.2em',
+            }}
+          >
+            {label}
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Blackboard({ children, label, style }) {
+  return (
+    <div
+      style={{
+        background: C.frame,
+        backgroundImage: `linear-gradient(180deg, ${C.frameLight} 0%, ${C.frame} 35%, ${C.frame} 65%, ${C.frameDark} 100%)`,
+        padding: '6px',
+        borderRadius: 4,
+        boxShadow: `3px 4px 0 ${C.pageEdge}, inset 0 0 0 1px ${C.frameDark}`,
+        position: 'relative',
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          background: C.board,
+          padding: '1rem',
+          color: C.chalk,
+          position: 'relative',
+          boxShadow: `inset 0 1px 0 ${C.boardDeep}80`,
+        }}
+      >
+        {label && (
+          <div
+            style={{
+              position: 'absolute', top: 8, right: 14,
+              fontFamily: F_MONO, fontSize: 9,
+              color: C.chalkFaint, letterSpacing: '0.2em', zIndex: 2,
+            }}
+          >
+            {label}
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ノート用紙（横罫線+赤マージン）
+function NotePaper({ children, style }) {
+  return (
+    <div
+      style={{
+        background: C.paperLight,
+        backgroundImage: `
+          linear-gradient(${C.paperLight} 0px, ${C.paperLight} 31px, ${C.rule2}55 31px, ${C.rule2}55 32px, ${C.paperLight} 32px),
+          linear-gradient(90deg, transparent 56px, ${C.margin}80 56px, ${C.margin}80 57px, transparent 57px)
+        `,
+        backgroundSize: '100% 32px, 100% 100%',
+        border: `1px solid ${C.rule}`,
+        boxShadow: `4px 4px 0 ${C.paperDark}`,
+        padding: '1.4rem 1.4rem 1.4rem 4.5rem',
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Section wrappers ---------------------------------------------------
+
+function ModuleHeader({ kicker, title, subtitle, accent }) {
+  return (
+    <div className="mb-6">
+      <Tag bg={accent} color={C.paperLight}>{kicker}</Tag>
+      <h2
+        className="mt-3"
+        style={{
+          fontFamily: F_DISP, fontWeight: 600, fontSize: '2.6rem',
+          lineHeight: 1.15, color: C.ink, letterSpacing: '0.01em',
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ fontFamily: F_MONO, fontSize: 12, color: C.inkLight, marginTop: 4, letterSpacing: '0.08em' }}>
+        — {subtitle} —
+      </p>
+    </div>
+  );
+}
+
+function Story({ children }) {
+  return (
+    <div
+      className="mb-6"
+      style={{
+        fontFamily: F_DISP, fontSize: '1.05rem', lineHeight: 1.95,
+        color: C.inkSoft,
+        background: C.paperLight,
+        backgroundImage: `
+          linear-gradient(transparent 0px, transparent 30px, ${C.rule2}30 30px, ${C.rule2}30 31px, transparent 31px)
+        `,
+        backgroundSize: '100% 32px',
+        borderLeft: `2px solid ${C.margin}`,
+        padding: '0.9rem 1.2rem 0.9rem 1.6rem',
+        boxShadow: `2px 2px 0 ${C.paperDark}`,
+        position: 'relative',
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute', left: '0.5rem', top: '0.5rem',
+          fontFamily: F_MONO, fontSize: 9, color: C.margin,
+          letterSpacing: '0.15em',
+        }}
+      >
+        ✎
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children, num }) {
+  return (
+    <div className="flex items-baseline gap-3 mb-3 mt-8">
+      {num && (
+        <span style={{ fontFamily: F_MONO, fontSize: 12, color: C.inkLight }}>
+          §{num}
+        </span>
+      )}
+      <h3 style={{ fontFamily: F_DISP, fontWeight: 600, fontSize: '1.4rem', color: C.ink }}>
+        {children}
+      </h3>
+    </div>
+  );
+}
+
+// === HOME =============================================================
+
+const MODULES = [
+  {
+    id: 'lp',
+    no: '01',
+    title: '工場の社長になる',
+    sub: '2D線形計画 — 実行可能領域を見る',
+    blurb: '2種類のレモネードを作る。砂糖とレモンの量に上限があるなかで、利益が最大になる組み合わせを求める。',
+    accent: C.red,
+  },
+  {
+    id: 'knapsack',
+    no: '02',
+    title: '旅の荷物を詰める',
+    sub: 'ナップサック問題 — 離散最適化の入門',
+    blurb: '容量10kgのバックパックに荷物を詰める。重さの上限を守りつつ、満足度の合計が最大になる組み合わせを選ぶ。',
+    accent: C.blue,
+  },
+  {
+    id: 'transport',
+    no: '03',
+    title: 'お菓子を配送する',
+    sub: '輸送問題 — 割当の直感',
+    blurb: '2工場から3店舗へお菓子を運ぶ。経路ごとにコストが異なるなか、合計コストを最小にする配送計画を作る。',
+    accent: C.yellow,
+  },
+  {
+    id: 'shift',
+    no: '04',
+    title: 'シフトを組む',
+    sub: 'スケジューリング — 制約のパズル',
+    blurb: '4人のスタッフで5日間のシフトを組む。各日の必要人数、勤務日数の上限、希望休をすべて満たすシフトを作る。',
+    accent: C.green,
+  },
+  {
+    id: 'setcover',
+    no: '05',
+    title: '消防署を配置する',
+    sub: '集合被覆問題 — 最少リソースで全カバー',
+    blurb: '町の全エリアを1つの消防署で守るには候補のうち何箇所を開設すればよいか。最少の数で全エリアをカバーする組み合わせを選ぶ。',
+    accent: C.red,
+  },
+  {
+    id: 'facility',
+    no: '06',
+    title: '倉庫を建てる',
+    sub: '施設配置問題 — 固定費 vs 輸送費',
+    blurb: '4つの倉庫候補から建設地を選び、5つの需要点へ配送する。建設費（固定費）と輸送費の合計を最小にする組み合わせを求める。',
+    accent: C.yellow,
+  },
+  {
+    id: 'portfolio',
+    no: '07',
+    title: '資産を運用する',
+    sub: 'ポートフォリオ最適化 — リスクとリターン',
+    blurb: '4種類の資産にどう配分するか。リスク許容度に応じて、効率的フロンティア上の最適な配分を求める。',
+    accent: C.blue,
+  },
+];
+
+function HomeView({ go }) {
+  return (
+    <div>
+      {/* Hero */}
+      <div className="mb-12">
+        <Tag bg={C.ink} color={C.paper}>OPTIMIZATION LAB · 2026</Tag>
+        <h1
+          className="mt-4"
+          style={{
+            fontFamily: F_DISP, fontWeight: 600,
+            fontSize: 'clamp(2.5rem, 6vw, 4.4rem)',
+            lineHeight: 1.05, color: C.ink, letterSpacing: '-0.01em',
+          }}
+        >
+          数理最適化<br />
+          <span style={{ color: C.red }}>スターター</span>
+        </h1>
+        <p
+          className="mt-5 max-w-xl"
+          style={{
+            fontFamily: F_DISP, fontSize: '1.1rem', lineHeight: 1.85, color: C.inkSoft,
+          }}
+        >
+          制約のもとで目的を最大化（最小化）する考え方を、4つの題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。
+        </p>
+      </div>
+
+      {/* 3要素 - 黒板で定義 */}
+      <div style={{ marginBottom: '3rem' }}>
+        <Blackboard label="ESSENCE / 数理最適化を構成する3つの要素">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { k: '決定変数', v: 'あなたが決められること', ex: 'どれを、いくつ、いつ', color: C.chalkPink },
+              { k: '目的関数', v: '最大化（最小化）したい量', ex: '利益・距離・時間', color: C.chalkBlue },
+              { k: '制約条件', v: '守らなければならないこと', ex: '予算・容量・需要', color: C.chalkYellow },
+            ].map((it, i) => (
+              <div key={i} style={{ borderTop: `2px solid ${it.color}`, paddingTop: '0.6rem' }}>
+                <div style={{ fontFamily: F_DISP, fontSize: '1.3rem', fontWeight: 600, color: it.color }}>
+                  {it.k}
+                </div>
+                <div style={{ fontFamily: F_BODY, fontSize: 14, color: C.chalk, marginTop: 4 }}>
+                  {it.v}
+                </div>
+                <div style={{ fontFamily: F_MONO, fontSize: 12, color: C.chalkSoft, marginTop: 6 }}>
+                  e.g. {it.ex}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div
+            className="mt-5 pt-4"
+            style={{
+              borderTop: `1px dashed ${C.chalkFaint}`,
+              fontFamily: F_BODY, fontSize: 14, color: C.chalk, lineHeight: 1.85,
+            }}
+          >
+            <b style={{ color: C.chalkYellow }}>制約条件</b>を満たしながら、
+            <b style={{ color: C.chalkBlue }}>目的関数</b>を最大化（最小化）する
+            <b style={{ color: C.chalkPink }}>決定変数</b>の値を求める——これが数理最適化。
+          </div>
+        </Blackboard>
+      </div>
+
+      {/* Module cards */}
+      <div className="mb-4">
+        <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.15em' }}>
+          LESSONS / 4つのレッスン
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {MODULES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => go(m.id)}
+            className="text-left group"
+            style={{
+              background: C.page,
+              border: `1px solid ${C.pageEdge}`,
+              borderLeft: `3px solid ${m.accent}`,
+              padding: '1.5rem',
+              cursor: 'pointer',
+              boxShadow: `3px 3px 0 ${C.pageEdge}`,
+              transition: 'transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translate(-2px,-2px)';
+              e.currentTarget.style.boxShadow = `5px 5px 0 ${C.pageEdge}`;
+              e.currentTarget.style.borderTopColor = C.frame;
+              e.currentTarget.style.borderRightColor = C.frame;
+              e.currentTarget.style.borderBottomColor = C.frame;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translate(0,0)';
+              e.currentTarget.style.boxShadow = `3px 3px 0 ${C.pageEdge}`;
+              e.currentTarget.style.borderTopColor = C.pageEdge;
+              e.currentTarget.style.borderRightColor = C.pageEdge;
+              e.currentTarget.style.borderBottomColor = C.pageEdge;
+            }}
+          >
+            <div className="flex items-baseline justify-between mb-3">
+              <span
+                style={{
+                  fontFamily: F_MONO, fontSize: 11, color: m.accent,
+                  letterSpacing: '0.2em', fontWeight: 500,
+                }}
+              >
+                {m.no}
+              </span>
+              <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>→</span>
+            </div>
+            <h3 style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>
+              {m.title}
+            </h3>
+            <div style={{ fontFamily: F_MONO, fontSize: 11.5, color: C.inkLight, marginTop: 6, letterSpacing: '0.04em' }}>
+              {m.sub}
+            </div>
+            <p
+              className="mt-3"
+              style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.7 }}
+            >
+              {m.blurb}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// === LP MODULE ========================================================
+
+function LPView() {
+  // 制約は固定: 2x + y <= 40 (砂糖), x + 2y <= 50 (レモン), x,y >= 0
+  // 利益 cA*x + cB*y を最大化
+  const [cA, setCA] = useState(120);
+  const [cB, setCB] = useState(100);
+  const [showLevel, setShowLevel] = useState(true);
+  const [showVertices, setShowVertices] = useState(true);
+
+  // 頂点（手計算で4つ）
+  const vertices = useMemo(
+    () => [
+      { x: 0, y: 0, name: 'O' },
+      { x: 20, y: 0, name: 'A' },
+      { x: 10, y: 20, name: 'B' },
+      { x: 0, y: 25, name: 'C' },
+    ],
+    []
+  );
+
+  const evald = vertices.map((v) => ({ ...v, val: cA * v.x + cB * v.y }));
+  const optIdx = evald.reduce((bi, v, i, a) => (v.val > a[bi].val ? i : bi), 0);
+  const opt = evald[optIdx];
+
+  // SVG座標変換
+  const W = 560, H = 460, P = 46;
+  const xMax = 30, yMax = 30;
+  const sx = (x) => P + (x / xMax) * (W - 2 * P);
+  const sy = (y) => H - P - (y / yMax) * (H - 2 * P);
+
+  const polyPoints = vertices.map((v) => `${sx(v.x)},${sy(v.y)}`).join(' ');
+
+  // 目的関数の等高線（最適値を通る線）cA*x + cB*y = opt.val
+  // ボックス [0,xMax] × [0,yMax] と交わる2点を求める
+  const levelLine = useMemo(() => {
+    const v = opt.val;
+    if (v === 0) return null;
+    const pts = [];
+    if (cB !== 0) {
+      const y1 = v / cB;
+      if (y1 >= -0.001 && y1 <= yMax + 0.001) pts.push({ x: 0, y: Math.max(0, Math.min(yMax, y1)) });
+      const y2 = (v - cA * xMax) / cB;
+      if (y2 >= -0.001 && y2 <= yMax + 0.001) pts.push({ x: xMax, y: Math.max(0, Math.min(yMax, y2)) });
+    }
+    if (cA !== 0) {
+      const x1 = v / cA;
+      if (x1 >= -0.001 && x1 <= xMax + 0.001) pts.push({ x: Math.max(0, Math.min(xMax, x1)), y: 0 });
+      const x2 = (v - cB * yMax) / cA;
+      if (x2 >= -0.001 && x2 <= xMax + 0.001) pts.push({ x: Math.max(0, Math.min(xMax, x2)), y: yMax });
+    }
+    // 重複排除
+    const uniq = [];
+    for (const p of pts) {
+      if (!uniq.some((u) => Math.abs(u.x - p.x) < 0.05 && Math.abs(u.y - p.y) < 0.05)) {
+        uniq.push(p);
+      }
+    }
+    if (uniq.length < 2) return null;
+    return { x1: uniq[0].x, y1: uniq[0].y, x2: uniq[1].x, y2: uniq[1].y };
+  }, [cA, cB, opt.val]);
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 01" title="工場の社長になる" subtitle="2D LINEAR PROGRAMMING" accent={C.red} />
+
+      <Story>
+        レモネードAとB、2種類を売って利益を最大化したい。<br />
+        手元の砂糖は40、レモンは50しかない。<br />
+        AとBを何杯ずつ作ればよいか？
+      </Story>
+
+      {/* 設定パネル */}
+      <Card accent={C.red}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          <div style={{ background: C.paper, padding: '0.8rem', border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>制約 / 砂糖</div>
+            <div style={{ fontFamily: F_MONO, fontSize: 14, color: C.red, marginTop: 4 }}>
+              2 A + 1 B ≤ 40
+            </div>
+            <div style={{ fontFamily: F_BODY, fontSize: 12, color: C.inkSoft, marginTop: 4 }}>
+              1杯あたり A:2、B:1。在庫 40。
+            </div>
+          </div>
+          <div style={{ background: C.paper, padding: '0.8rem', border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>制約 / レモン</div>
+            <div style={{ fontFamily: F_MONO, fontSize: 14, color: C.blue, marginTop: 4 }}>
+              1 A + 2 B ≤ 50
+            </div>
+            <div style={{ fontFamily: F_BODY, fontSize: 12, color: C.inkSoft, marginTop: 4 }}>
+              1杯あたり A:1、B:2。在庫 50。
+            </div>
+          </div>
+          <div style={{ background: C.paper, padding: '0.8rem', border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>目的関数 / 利益</div>
+            <div style={{ fontFamily: F_MONO, fontSize: 14, color: C.green, marginTop: 4 }}>
+              max  {cA} A + {cB} B
+            </div>
+            <div style={{ fontFamily: F_BODY, fontSize: 12, color: C.inkSoft, marginTop: 4 }}>
+              スライダーで利益単価を変更できる。
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+          {/* SVG - 黒板 */}
+          <Blackboard label="LP / 図解">
+            <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              {/* グリッド（チョーク薄影） */}
+              {[...Array(7)].map((_, i) => {
+                const t = i * 5;
+                return (
+                  <g key={`g${i}`} stroke="rgba(0,0,0,0.06)" strokeWidth={0.5}>
+                    <line x1={sx(t)} y1={sy(0)} x2={sx(t)} y2={sy(yMax)} />
+                    <line x1={sx(0)} y1={sy(t)} x2={sx(xMax)} y2={sy(t)} />
+                  </g>
+                );
+              })}
+              {/* 軸 */}
+              <line x1={sx(0)} y1={sy(0)} x2={sx(xMax)} y2={sy(0)} stroke={C.chalk} strokeWidth={1.5} />
+              <line x1={sx(0)} y1={sy(0)} x2={sx(0)} y2={sy(yMax)} stroke={C.chalk} strokeWidth={1.5} />
+              {/* 軸ラベル */}
+              {[0, 5, 10, 15, 20, 25, 30].map((t) => (
+                <g key={`tx${t}`} style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>
+                  <text x={sx(t)} y={sy(0) + 14} textAnchor="middle">{t}</text>
+                  <text x={sx(0) - 6} y={sy(t) + 3} textAnchor="end">{t}</text>
+                </g>
+              ))}
+              <text x={sx(xMax) + 4} y={sy(0) + 4} style={{ fontFamily: F_DISP, fontSize: 14, fill: C.chalk, fontStyle: 'italic' }}>A</text>
+              <text x={sx(0) - 4} y={sy(yMax) - 6} style={{ fontFamily: F_DISP, fontSize: 14, fill: C.chalk, fontStyle: 'italic' }} textAnchor="end">B</text>
+
+              {/* 砂糖制約 */}
+              <line
+                x1={sx(5)} y1={sy(30)} x2={sx(20)} y2={sy(0)}
+                stroke={C.chalkPink} strokeWidth={1.8} strokeDasharray="6 3"
+              />
+              <text
+                x={sx(7)} y={sy(26) + 3}
+                style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkPink }}
+              >
+                砂糖
+              </text>
+
+              {/* レモン制約 */}
+              <line
+                x1={sx(0)} y1={sy(25)} x2={sx(30)} y2={sy(10)}
+                stroke={C.chalkBlue} strokeWidth={1.8} strokeDasharray="6 3"
+              />
+              <text
+                x={sx(22)} y={sy(15) + 3}
+                style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkBlue }}
+              >
+                レモン
+              </text>
+
+              {/* 実行可能領域 */}
+              <polygon
+                points={polyPoints}
+                fill={C.chalkGreen} fillOpacity={0.18}
+                stroke={C.chalkGreen} strokeWidth={2}
+              />
+              <text
+                x={sx(7.5)} y={sy(8)}
+                style={{ fontFamily: F_DISP, fontSize: 13, fill: C.chalkGreen, fontStyle: 'italic' }}
+                textAnchor="middle"
+              >
+                実行可能領域
+              </text>
+
+              {/* 等高線 */}
+              {showLevel && levelLine && (
+                <line
+                  x1={sx(levelLine.x1)} y1={sy(levelLine.y1)}
+                  x2={sx(levelLine.x2)} y2={sy(levelLine.y2)}
+                  stroke={C.chalkYellow} strokeWidth={2}
+                  strokeDasharray="2 4"
+                />
+              )}
+
+              {/* 頂点 */}
+              {showVertices && evald.map((v, i) => (
+                <g key={i}>
+                  <circle
+                    cx={sx(v.x)} cy={sy(v.y)} r={i === optIdx ? 7 : 4.5}
+                    fill={i === optIdx ? C.chalkYellow : C.board}
+                    stroke={i === optIdx ? C.chalkYellow : C.chalk}
+                    strokeWidth={1.6}
+                  />
+                  {i === optIdx && (
+                    <circle
+                      cx={sx(v.x)} cy={sy(v.y)} r={14}
+                      fill="none" stroke={C.chalkYellow} strokeWidth={1.5} opacity={0.4}
+                    >
+                      <animate attributeName="r" values="7;18" dur="1.6s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.5;0" dur="1.6s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+                  <text
+                    x={sx(v.x) + 10} y={sy(v.y) - 8}
+                    style={{
+                      fontFamily: F_MONO,
+                      fontSize: i === optIdx ? 12 : 11,
+                      fill: i === optIdx ? C.chalkYellow : C.chalkSoft,
+                      fontWeight: i === optIdx ? 600 : 400,
+                    }}
+                  >
+                    {v.name}({v.x},{v.y})
+                  </text>
+                </g>
+              ))}
+            </svg>
+
+            <div className="mt-3 flex gap-4 flex-wrap">
+              <label style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft }}>
+                <input type="checkbox" checked={showLevel} onChange={(e) => setShowLevel(e.target.checked)} className="mr-1" style={{ accentColor: C.chalkYellow }} />
+                等高線を見る
+              </label>
+              <label style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft }}>
+                <input type="checkbox" checked={showVertices} onChange={(e) => setShowVertices(e.target.checked)} className="mr-1" style={{ accentColor: C.chalkYellow }} />
+                頂点を見る
+              </label>
+            </div>
+          </Blackboard>
+
+          {/* コントロール */}
+          <div className="space-y-5">
+            <div>
+              <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 8 }}>
+                利益を変えてみる
+              </div>
+              <div className="space-y-3">
+                <Slider label="レモネードA 1杯の利益" value={cA} onChange={setCA} min={20} max={300} step={10} suffix=" 円" color={C.red} />
+                <Slider label="レモネードB 1杯の利益" value={cB} onChange={setCB} min={20} max={300} step={10} suffix=" 円" color={C.blue} />
+              </div>
+            </div>
+
+            <div style={{
+              background: C.board,
+              color: C.chalk,
+              padding: '1rem',
+              border: `4px solid ${C.frame}`,
+              borderRadius: 3,
+              boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+            }}>
+              <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+                OPTIMAL SOLUTION
+              </div>
+              <div className="mt-2 flex items-baseline gap-3">
+                <span style={{ fontFamily: F_DISP, fontSize: '2rem', fontWeight: 600, color: C.chalkYellow }}>
+                  ¥{opt.val.toLocaleString()}
+                </span>
+                <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft }}>
+                  最大利益
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2" style={{ fontFamily: F_MONO, fontSize: 13 }}>
+                <div>
+                  <div style={{ color: C.chalkSoft, fontSize: 11 }}>レモネードA</div>
+                  <div style={{ color: C.chalk, fontSize: 18, fontWeight: 500 }}>{opt.x} 杯</div>
+                </div>
+                <div>
+                  <div style={{ color: C.chalkSoft, fontSize: 11 }}>レモネードB</div>
+                  <div style={{ color: C.chalk, fontSize: 18, fontWeight: 500 }}>{opt.y} 杯</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 6 }}>
+                各頂点での利益
+              </div>
+              <table style={{ fontFamily: F_MONO, fontSize: 12, width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ color: C.inkLight }}>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', borderBottom: `1px solid ${C.rule}` }}>頂点</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', borderBottom: `1px solid ${C.rule}` }}>(A, B)</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', borderBottom: `1px solid ${C.rule}` }}>利益</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evald.map((v, i) => (
+                    <tr key={i} style={{
+                      background: i === optIdx ? C.redLight : 'transparent',
+                      color: i === optIdx ? C.redDeep : C.ink,
+                      fontWeight: i === optIdx ? 600 : 400,
+                    }}>
+                      <td style={{ padding: '4px 6px' }}>{v.name}</td>
+                      <td style={{ textAlign: 'right', padding: '4px 6px' }}>({v.x}, {v.y})</td>
+                      <td style={{ textAlign: 'right', padding: '4px 6px' }}>¥{v.val.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Math view */}
+      <SectionTitle num="1.1">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="LP / 線形計画">
+          <div style={{ color: C.chalkGreen, fontWeight: 500 }}>maximize</div>
+          <div style={{ paddingLeft: '1.5em' }}>{cA} · A + {cB} · B</div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>2 · A + 1 · B ≤ 40<span style={{ color: C.chalkSoft }}>  （砂糖）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>1 · A + 2 · B ≤ 50<span style={{ color: C.chalkSoft }}>  （レモン）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>A, B ≥ 0</div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.8 }}>
+          目的関数も制約もすべて変数の1次式で書ける問題が <b>線形計画問題（LP）</b>。
+          実行可能領域は凸多角形になり、最適解は必ずいずれかの頂点に存在する。
+          そのため、頂点の数だけ目的関数を評価すれば最適解が求まる。
+        </p>
+      </Card>
+
+      <SectionTitle num="1.2">ポイント</SectionTitle>
+      <Card style={{ background: C.yellowLight, borderColor: C.yellow }}>
+        <p style={{ fontFamily: F_BODY, fontSize: 14.5, color: C.ink, lineHeight: 1.85 }}>
+          利益のスライダーを動かすと、最適点が頂点から別の頂点に移る。
+          連続的に動くのではなく、目的関数の傾きがある角度を超えると別の頂点が最適になる。
+          実務では、頂点を効率的に探索する <b>シンプレックス法</b> や <b>内点法</b> が使われる。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === KNAPSACK MODULE ==================================================
+
+const KNAP_ITEMS = [
+  { id: 'fire',  name: '焚き火セット', w: 6, v: 11, emoji: '🔥' },
+  { id: 'sleep', name: '寝袋',         w: 5, v: 10, emoji: '🛏️' },
+  { id: 'cam',   name: '一眼カメラ',   w: 5, v: 10, emoji: '📷' },
+  { id: 'aid',   name: '救急セット',   w: 1, v: 3,  emoji: '🩹' },
+  { id: 'snack', name: 'お菓子',       w: 1, v: 2,  emoji: '🍫' },
+  { id: 'water', name: '水筒',         w: 1, v: 2,  emoji: '💧' },
+  { id: 'book',  name: '文庫本',       w: 2, v: 1,  emoji: '📖' },
+  { id: 'chair', name: '折りたたみ椅子', w: 3, v: 4, emoji: '🪑' },
+];
+const KNAP_CAP = 10;
+
+function bruteForceKnapsack(items, cap) {
+  const n = items.length;
+  let bestVal = -1, bestMask = 0;
+  for (let m = 0; m < 1 << n; m++) {
+    let w = 0, v = 0;
+    for (let i = 0; i < n; i++) if (m & (1 << i)) { w += items[i].w; v += items[i].v; }
+    if (w <= cap && v > bestVal) { bestVal = v; bestMask = m; }
+  }
+  const sel = new Set();
+  for (let i = 0; i < n; i++) if (bestMask & (1 << i)) sel.add(items[i].id);
+  return { selected: sel, value: bestVal };
+}
+function greedyKnapsack(items, cap) {
+  const sorted = [...items].sort((a, b) => b.v / b.w - a.v / a.w);
+  const sel = new Set();
+  let w = 0, v = 0;
+  for (const it of sorted) {
+    if (w + it.w <= cap) { sel.add(it.id); w += it.w; v += it.v; }
+  }
+  return { selected: sel, value: v, weight: w };
+}
+
+function KnapsackView() {
+  const [picked, setPicked] = useState(new Set());
+  const [reveal, setReveal] = useState(null); // 'opt' | 'greedy' | null
+
+  const totalW = useMemo(() => KNAP_ITEMS.filter(i => picked.has(i.id)).reduce((s, i) => s + i.w, 0), [picked]);
+  const totalV = useMemo(() => KNAP_ITEMS.filter(i => picked.has(i.id)).reduce((s, i) => s + i.v, 0), [picked]);
+  const over = totalW > KNAP_CAP;
+
+  const optResult = useMemo(() => bruteForceKnapsack(KNAP_ITEMS, KNAP_CAP), []);
+  const greedyResult = useMemo(() => greedyKnapsack(KNAP_ITEMS, KNAP_CAP), []);
+
+  const toggle = (id) => {
+    const next = new Set(picked);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setPicked(next);
+    setReveal(null);
+  };
+
+  const showSet = reveal === 'opt' ? optResult.selected : reveal === 'greedy' ? greedyResult.selected : picked;
+  const showW = [...showSet].reduce((s, id) => s + KNAP_ITEMS.find(i => i.id === id).w, 0);
+  const showV = [...showSet].reduce((s, id) => s + KNAP_ITEMS.find(i => i.id === id).v, 0);
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 02" title="旅の荷物を詰める" subtitle="0/1 KNAPSACK PROBLEM" accent={C.blue} />
+
+      <Story>
+        キャンプに持っていく荷物を選ぶ。<br />
+        バックパックの容量は <b>10 kg</b> まで。<br />
+        満足度（★）の合計が最大になる組み合わせを選ぶ。
+      </Story>
+
+      <Card accent={C.blue}>
+        {/* Status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          <div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>容量</div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.8rem', fontWeight: 600, color: over ? C.red : C.ink }}>
+              {showW.toFixed(0)} <span style={{ color: C.inkLight, fontSize: '1rem' }}>/ {KNAP_CAP} kg</span>
+            </div>
+            <div style={{
+              height: 10, background: C.paperDark, marginTop: 6, position: 'relative', overflow: 'hidden',
+              border: `1px solid ${C.rule}`,
+            }}>
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: `${Math.min(100, (showW / KNAP_CAP) * 100)}%`,
+                background: over ? C.red : C.blue, transition: 'width 0.25s ease',
+              }} />
+              {over && (
+                <div style={{
+                  position: 'absolute', top: 0, right: 0, bottom: 0,
+                  width: `${Math.min(100, ((showW - KNAP_CAP) / KNAP_CAP) * 100)}%`,
+                  background: C.redDeep,
+                }} />
+              )}
+            </div>
+            {over && (
+              <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.red, marginTop: 4 }}>
+                オーバー：{(showW - KNAP_CAP).toFixed(0)} kg 超過
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>満足度（★）</div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.8rem', fontWeight: 600, color: C.green }}>
+              {showV} <span style={{ color: C.inkLight, fontSize: '1rem' }}>/ 43</span>
+            </div>
+            <div style={{ fontFamily: F_BODY, fontSize: 12, color: C.inkLight, marginTop: 4 }}>
+              全アイテムの合計（重量 24 kg）
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>状態</div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.3rem', fontWeight: 600, color: C.ink, marginTop: 6 }}>
+              {reveal === 'opt' ? '最適解を表示中' :
+               reveal === 'greedy' ? '貪欲解を表示中' :
+               over ? '容量オーバー' : 'あなたの選択'}
+            </div>
+          </div>
+        </div>
+
+        {/* Items grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-5">
+          {KNAP_ITEMS.map((it) => {
+            const isPicked = showSet.has(it.id);
+            const couldOver = !isPicked && totalW + it.w > KNAP_CAP && !reveal;
+            return (
+              <button
+                key={it.id}
+                onClick={() => toggle(it.id)}
+                disabled={!!reveal}
+                style={{
+                  background: isPicked ? C.blue : C.paper,
+                  color: isPicked ? C.paperLight : C.ink,
+                  border: `1.5px solid ${isPicked ? C.blueDeep : couldOver ? C.red : C.rule}`,
+                  padding: '0.8rem 0.6rem',
+                  cursor: reveal ? 'not-allowed' : 'pointer',
+                  textAlign: 'left',
+                  opacity: reveal ? (isPicked ? 1 : 0.4) : 1,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ fontSize: 26, marginBottom: 2 }}>{it.emoji}</div>
+                <div style={{ fontFamily: F_DISP, fontSize: 14, fontWeight: 600 }}>{it.name}</div>
+                <div style={{ fontFamily: F_MONO, fontSize: 11, marginTop: 4, color: isPicked ? C.paperDark : C.inkLight }}>
+                  {it.w} kg · {it.v}★
+                </div>
+                <div style={{ fontFamily: F_MONO, fontSize: 10, marginTop: 2, color: isPicked ? C.paperDark : C.inkLighter }}>
+                  ★/kg = {(it.v / it.w).toFixed(2)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Btn variant="ghost" size="sm" onClick={() => { setPicked(new Set()); setReveal(null); }}>
+            リセット
+          </Btn>
+          <Btn variant="soft" size="sm" onClick={() => setReveal(reveal === 'greedy' ? null : 'greedy')}>
+            {reveal === 'greedy' ? '元に戻す' : '貪欲解を見る（★/kg順）'}
+          </Btn>
+          <Btn variant="primary" size="sm" onClick={() => setReveal(reveal === 'opt' ? null : 'opt')}>
+            {reveal === 'opt' ? '元に戻す' : '最適解を見る'}
+          </Btn>
+        </div>
+      </Card>
+
+      <SectionTitle num="2.1">貪欲法と最適解の比較</SectionTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card style={{ background: C.yellowLight, borderColor: C.yellow }}>
+          <Tag bg={C.yellow} color={C.paperLight}>GREEDY / 貪欲法</Tag>
+          <div style={{ fontFamily: F_DISP, fontSize: '2rem', fontWeight: 600, color: C.ink, marginTop: 8 }}>
+            {greedyResult.value} <span style={{ fontSize: '1rem', color: C.inkLight }}>★</span>
+          </div>
+          <p style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
+            ★/kg が大きい順に詰める素朴な戦略。高速だが、必ずしも最適解には到達しない。
+          </p>
+        </Card>
+        <Card style={{ background: C.greenLight, borderColor: C.green }}>
+          <Tag bg={C.green} color={C.paperLight}>OPTIMAL / 最適解</Tag>
+          <div style={{ fontFamily: F_DISP, fontSize: '2rem', fontWeight: 600, color: C.ink, marginTop: 8 }}>
+            {optResult.value} <span style={{ fontSize: '1rem', color: C.inkLight }}>★</span>
+          </div>
+          <p style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
+            全 256 通り（=2<sup>8</sup>）を試して得た最大値。アイテム数が増えると組み合わせは爆発する（20個で約100万、30個で約10億）。
+          </p>
+        </Card>
+      </div>
+
+      <SectionTitle num="2.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="0/1 INTEGER PROGRAMMING">
+          <div style={{ color: C.chalkGreen, fontWeight: 500 }}>maximize</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ v<sub>i</sub> · x<sub>i</sub></div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ w<sub>i</sub> · x<sub>i</sub> ≤ 10</div>
+          <div style={{ paddingLeft: '1.5em' }}>x<sub>i</sub> ∈ {'{ 0, 1 }'}<span style={{ color: C.chalkSoft }}>  （入れる / 入れない）</span></div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.8 }}>
+          変数が0か1のみを取る問題は <b>0/1整数計画</b> と呼ばれる。LPと違って頂点だけを調べれば済むわけではなく、原理的には組み合わせ爆発する。
+          実用には <b>動的計画法</b>、<b>分枝限定法</b>、<b>MIPソルバー（Gurobi等）</b> が用いられる。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === TRANSPORTATION MODULE ============================================
+
+function TransportView() {
+  // 工場 W1, W2、店舗 S1, S2, S3
+  // 容量: W1=20, W2=25 / 需要: S1=15, S2=10, S3=20
+  // コスト行列:
+  //   W1: 3, 5, 7
+  //   W2: 6, 4, 2
+  // 自由変数: x11, x12 (残りは決まる)
+  const [x11, setX11] = useState(0);
+  const [x12, setX12] = useState(0);
+  const [revealOpt, setRevealOpt] = useState(false);
+
+  const cap = { W1: 20, W2: 25 };
+  const dem = { S1: 15, S2: 10, S3: 20 };
+  const cost = [[3, 5, 7], [6, 4, 2]];
+
+  // 制約から残りを計算
+  const x13 = 20 - x11 - x12;
+  const x21 = 15 - x11;
+  const x22 = 10 - x12;
+  const x23 = x11 + x12;
+
+  const allFlows = [x11, x12, x13, x21, x22, x23];
+  const valid = allFlows.every((v) => v >= 0 && v <= 25);
+
+  const totalCost = useMemo(() => {
+    return cost[0][0] * x11 + cost[0][1] * x12 + cost[0][2] * x13
+         + cost[1][0] * x21 + cost[1][1] * x22 + cost[1][2] * x23;
+  }, [x11, x12, x13, x21, x22, x23]);
+
+  // 最適解 (前計算): x11=15, x12=5, x13=0, x21=0, x22=5, x23=20, cost=130
+  const opt = { x11: 15, x12: 5, x13: 0, x21: 0, x22: 5, x23: 20, cost: 130 };
+
+  const display = revealOpt
+    ? opt
+    : { x11, x12, x13, x21, x22, x23, cost: totalCost };
+
+  // SVG dims
+  const SW = 560, SH = 360;
+  const wPos = [{ x: 80, y: 110 }, { x: 80, y: 250 }];
+  const sPos = [{ x: 470, y: 70 }, { x: 470, y: 180 }, { x: 470, y: 290 }];
+
+  const flows = [
+    { from: 0, to: 0, val: display.x11, c: 3 },
+    { from: 0, to: 1, val: display.x12, c: 5 },
+    { from: 0, to: 2, val: display.x13, c: 7 },
+    { from: 1, to: 0, val: display.x21, c: 6 },
+    { from: 1, to: 1, val: display.x22, c: 4 },
+    { from: 1, to: 2, val: display.x23, c: 2 },
+  ];
+  const maxV = Math.max(1, ...flows.map(f => f.val));
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 03" title="お菓子を配送する" subtitle="TRANSPORTATION PROBLEM" accent={C.yellow} />
+
+      <Story>
+        2つの工場（W1, W2）から3つの店舗（S1, S2, S3）へお菓子を運ぶ。<br />
+        工場の出荷量と店舗の需要は決まっている。<br />
+        経路ごとのコストが異なるなか、合計コストを最小にする配送計画を作る。
+      </Story>
+
+      <Card accent={C.yellow}>
+        {/* Diagram - 黒板 */}
+        <Blackboard label="NETWORK / 配送図" style={{ marginBottom: '1rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            {/* Flows */}
+            {flows.map((f, i) => {
+              const a = wPos[f.from], b = sPos[f.to];
+              const sw = f.val === 0 ? 1 : 1.5 + (f.val / maxV) * 14;
+              const opacity = f.val === 0 ? 0.18 : 0.85;
+              const color = f.val === 0 ? C.chalkFaint : (revealOpt ? C.chalkYellow : C.chalkBlue);
+              return (
+                <g key={i}>
+                  <line
+                    x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke={color} strokeWidth={sw} opacity={opacity} strokeLinecap="round"
+                  />
+                  {f.val > 0 && (
+                    <g>
+                      <rect
+                        x={(a.x + b.x) / 2 - 22} y={(a.y + b.y) / 2 - 11}
+                        width={44} height={22} fill={C.board} stroke={C.chalk} strokeWidth={1}
+                      />
+                      <text
+                        x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 1}
+                        textAnchor="middle" dominantBaseline="middle"
+                        style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalk, fontWeight: 500 }}
+                      >
+                        {f.val}個
+                      </text>
+                      <text
+                        x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 13}
+                        textAnchor="middle"
+                        style={{ fontFamily: F_MONO, fontSize: 9, fill: C.chalkSoft }}
+                      >
+                        @¥{f.c}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Warehouses */}
+            {wPos.map((p, i) => {
+              const used = i === 0 ? display.x11 + display.x12 + display.x13 : display.x21 + display.x22 + display.x23;
+              const total = i === 0 ? cap.W1 : cap.W2;
+              return (
+                <g key={`w${i}`}>
+                  <rect
+                    x={p.x - 50} y={p.y - 35} width={100} height={70}
+                    fill="none" stroke={C.chalkBlue} strokeWidth={2}
+                  />
+                  <text x={p.x} y={p.y - 12} textAnchor="middle"
+                    style={{ fontFamily: F_DISP, fontSize: 18, fontWeight: 600, fill: C.chalkBlue }}>
+                    W{i + 1}
+                  </text>
+                  <text x={p.x} y={p.y + 8} textAnchor="middle"
+                    style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalk }}>
+                    出荷 {used}/{total}
+                  </text>
+                  <text x={p.x} y={p.y + 24} textAnchor="middle"
+                    style={{ fontFamily: F_MONO, fontSize: 10, fill: used === total ? C.chalkGreen : C.chalkPink }}>
+                    {used === total ? '✓ 完売' : `余り ${total - used}`}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Stores */}
+            {sPos.map((p, i) => {
+              const got = i === 0 ? display.x11 + display.x21 : i === 1 ? display.x12 + display.x22 : display.x13 + display.x23;
+              const need = [dem.S1, dem.S2, dem.S3][i];
+              return (
+                <g key={`s${i}`}>
+                  <rect
+                    x={p.x - 50} y={p.y - 30} width={100} height={60}
+                    fill="none" stroke={C.chalkYellow} strokeWidth={2}
+                  />
+                  <text x={p.x} y={p.y - 8} textAnchor="middle"
+                    style={{ fontFamily: F_DISP, fontSize: 16, fontWeight: 600, fill: C.chalkYellow }}>
+                    S{i + 1}
+                  </text>
+                  <text x={p.x} y={p.y + 12} textAnchor="middle"
+                    style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalk }}>
+                    入荷 {got}/{need}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </Blackboard>
+
+        {/* Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="md:col-span-2 space-y-3">
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>
+              W1 から S1, S2 への出荷量を決める（W1→S3 と W2 の各経路は自動で決まる）
+            </div>
+            <Slider
+              label="W1 → S1"
+              value={display.x11}
+              onChange={(v) => {
+                const nv = Math.min(15, Math.max(0, v));
+                setX11(nv);
+                if (nv + x12 > 20) setX12(20 - nv);
+                setRevealOpt(false);
+              }}
+              min={0} max={15} suffix=" 個" color={C.blue}
+            />
+            <Slider
+              label="W1 → S2"
+              value={display.x12}
+              onChange={(v) => {
+                const maxV = Math.min(10, 20 - x11);
+                const nv = Math.min(maxV, Math.max(0, v));
+                setX12(nv);
+                setRevealOpt(false);
+              }}
+              min={0} max={Math.min(10, 20 - x11)} suffix=" 個" color={C.blue}
+            />
+            <div className="flex gap-2 mt-3">
+              <Btn variant="ghost" size="sm" onClick={() => { setX11(0); setX12(0); setRevealOpt(false); }}>リセット</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setRevealOpt(!revealOpt)}>
+                {revealOpt ? '元に戻す' : '最適解を見る'}
+              </Btn>
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board,
+            color: C.chalk,
+            padding: '1rem',
+            border: `4px solid ${C.frame}`,
+            borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              {revealOpt ? 'OPTIMAL COST' : 'YOUR COST'}
+            </div>
+            <div className="mt-2">
+              <span style={{ fontFamily: F_DISP, fontSize: '2.4rem', fontWeight: 600, color: revealOpt ? C.chalkYellow : C.chalk }}>
+                ¥{display.cost}
+              </span>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, marginTop: 8 }}>
+              最適は ¥{opt.cost}（あと <b style={{ color: revealOpt ? C.chalkGreen : C.chalkYellow }}>¥{Math.max(0, totalCost - opt.cost)}</b> 削れる）
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="3.1">最適解の構造</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          コスト行列を見ると、最安は W2→S3（¥2）、次に W1→S1（¥3）。一方で W1→S3（¥7）と W2→S1（¥6）は割高。
+          安い経路を優先しつつ容量と需要の制約を満たすと、最適配分は <b>W1→S1=15</b>, <b>W1→S2=5</b>, <b>W2→S2=5</b>, <b>W2→S3=20</b> になる。
+        </p>
+        <div className="mt-4">
+          <Equation label="TRANSPORTATION LP">
+            <div style={{ color: C.chalkGreen, fontWeight: 500 }}>minimize</div>
+            <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i,j</sub> c<sub>ij</sub> · x<sub>ij</sub></div>
+            <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+            <div style={{ paddingLeft: '1.5em' }}>Σ<sub>j</sub> x<sub>ij</sub> = 容量<sub>i</sub><span style={{ color: C.chalkSoft }}>  （工場 i は全部出荷）</span></div>
+            <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> x<sub>ij</sub> = 需要<sub>j</sub><span style={{ color: C.chalkSoft }}>  （店舗 j は全部入荷）</span></div>
+            <div style={{ paddingLeft: '1.5em' }}>x<sub>ij</sub> ≥ 0</div>
+          </Equation>
+        </div>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85, marginTop: 12 }}>
+          これも線形計画（LP）の一種で <b>輸送問題</b> と呼ばれる。物流・配車・割当・電力配分など、構造を変えながら多くの場面に現れる。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === SHIFT SCHEDULING MODULE ==========================================
+
+const STAFF = [
+  { id: 0, name: '田中', off: [1] },     // 火休み（病院）
+  { id: 1, name: '佐藤', off: [3] },     // 木休み（講義）
+  { id: 2, name: '鈴木', off: [4] },     // 金休み（家族）
+  { id: 3, name: '山田', off: [0] },     // 月休み（バイト）
+];
+const DAYS = ['月', '火', '水', '木', '金'];
+const REQ = 2;       // 各日2人必要
+const MAX_DAYS = 3;  // 1人最大3日
+
+// ある時点の評価
+function evalShift(grid) {
+  const violations = { underStaffed: 0, overStaffed: 0, overWorked: 0, ngAssign: 0 };
+  // 各日の人数
+  const perDay = DAYS.map((_, d) => grid.reduce((s, row) => s + (row[d] ? 1 : 0), 0));
+  perDay.forEach((n) => {
+    if (n < REQ) violations.underStaffed += REQ - n;
+    if (n > REQ) violations.overStaffed += n - REQ;
+  });
+  // 各人の労働日
+  STAFF.forEach((s, i) => {
+    const total = grid[i].filter(Boolean).length;
+    if (total > MAX_DAYS) violations.overWorked += total - MAX_DAYS;
+    grid[i].forEach((on, d) => {
+      if (on && s.off.includes(d)) violations.ngAssign += 1;
+    });
+  });
+  return { perDay, violations };
+}
+
+// 自動で組む（簡易ヒューリスティック: NG避け、各人の余裕を見ながら埋める）
+function autoSolve() {
+  const g = STAFF.map(() => DAYS.map(() => false));
+  const counts = STAFF.map(() => 0);
+  for (let d = 0; d < DAYS.length; d++) {
+    // 候補: その日 OK & まだ MAX_DAYS 未満
+    const cand = STAFF
+      .filter((s) => !s.off.includes(d) && counts[s.id] < MAX_DAYS)
+      .sort((a, b) => counts[a.id] - counts[b.id]); // 少ない人から
+    for (let k = 0; k < REQ && k < cand.length; k++) {
+      g[cand[k].id][d] = true;
+      counts[cand[k].id] += 1;
+    }
+  }
+  return g;
+}
+
+function ShiftView() {
+  const [grid, setGrid] = useState(() => STAFF.map(() => DAYS.map(() => false)));
+  const { perDay, violations } = evalShift(grid);
+  const totalViolations = violations.underStaffed + violations.overStaffed + violations.overWorked + violations.ngAssign;
+  const staffTotals = grid.map((row) => row.filter(Boolean).length);
+
+  const toggle = (s, d) => {
+    const next = grid.map((row) => [...row]);
+    next[s][d] = !next[s][d];
+    setGrid(next);
+  };
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 04" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
+
+      <Story>
+        スタッフ <b>4 人</b>で月〜金のシフトを組む。<br />
+        各日 <b>2 人</b> 必要、1人あたり最大 <b>3 日</b> まで。<br />
+        スタッフごとに希望休がある。すべての制約を満たすシフトを作る。
+      </Story>
+
+      <Card accent={C.green}>
+        {/* Grid */}
+        <div className="overflow-x-auto">
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F_BODY }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '0.5rem', textAlign: 'left', fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}></th>
+                {DAYS.map((d) => (
+                  <th key={d} style={{ padding: '0.5rem', textAlign: 'center', fontFamily: F_DISP, fontSize: 16, color: C.ink }}>{d}</th>
+                ))}
+                <th style={{ padding: '0.5rem', textAlign: 'center', fontFamily: F_MONO, fontSize: 10, color: C.inkLight }}>計</th>
+              </tr>
+            </thead>
+            <tbody>
+              {STAFF.map((s) => (
+                <tr key={s.id} style={{ borderTop: `1px solid ${C.rule}` }}>
+                  <td style={{ padding: '0.5rem', fontFamily: F_DISP, fontSize: 15, color: C.ink, fontWeight: 500 }}>
+                    {s.name}
+                    <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight }}>
+                      NG: {s.off.map((d) => DAYS[d]).join(', ')}
+                    </div>
+                  </td>
+                  {DAYS.map((_, d) => {
+                    const on = grid[s.id][d];
+                    const isNG = s.off.includes(d);
+                    return (
+                      <td key={d} style={{ padding: '0.25rem', textAlign: 'center' }}>
+                        <button
+                          onClick={() => toggle(s.id, d)}
+                          style={{
+                            width: 56, height: 56,
+                            background: on
+                              ? (isNG ? C.red : C.green)
+                              : (isNG ? C.redLight : C.paper),
+                            color: on ? C.paperLight : (isNG ? C.red : C.inkLight),
+                            border: `1.5px solid ${on ? (isNG ? C.redDeep : C.greenDeep) : (isNG ? C.red : C.rule)}`,
+                            fontFamily: F_DISP, fontSize: 22, fontWeight: 600,
+                            cursor: 'pointer',
+                            position: 'relative',
+                            backgroundImage: isNG && !on
+                              ? `repeating-linear-gradient(45deg, transparent, transparent 4px, ${C.red}33 4px, ${C.red}33 5px)`
+                              : 'none',
+                          }}
+                          title={isNG ? `${s.name}は${DAYS[d]}NG` : ''}
+                        >
+                          {on ? '○' : ''}
+                        </button>
+                      </td>
+                    );
+                  })}
+                  <td style={{ textAlign: 'center', fontFamily: F_MONO, fontSize: 14,
+                    color: staffTotals[s.id] > MAX_DAYS ? C.red : C.ink, fontWeight: 500 }}>
+                    {staffTotals[s.id]}/{MAX_DAYS}
+                  </td>
+                </tr>
+              ))}
+              <tr style={{ borderTop: `2px solid ${C.ink}` }}>
+                <td style={{ padding: '0.4rem', fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>必要 ≥ {REQ}</td>
+                {perDay.map((n, d) => (
+                  <td key={d} style={{
+                    textAlign: 'center', padding: '0.4rem',
+                    fontFamily: F_MONO, fontSize: 14, fontWeight: 500,
+                    color: n < REQ ? C.red : n > REQ ? C.yellowDeep : C.green,
+                  }}>
+                    {n}/{REQ}
+                  </td>
+                ))}
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Status */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+          <StatusBox label="人数不足" value={violations.underStaffed} unit="人日" bad={violations.underStaffed > 0} />
+          <StatusBox label="人数超過" value={violations.overStaffed} unit="人日" bad={violations.overStaffed > 0} warn />
+          <StatusBox label="勤務日超過" value={violations.overWorked} unit="日" bad={violations.overWorked > 0} />
+          <StatusBox label="NG日に割当" value={violations.ngAssign} unit="件" bad={violations.ngAssign > 0} />
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-5">
+          <Btn variant="ghost" size="sm" onClick={() => setGrid(STAFF.map(() => DAYS.map(() => false)))}>
+            空にする
+          </Btn>
+          <Btn variant="soft" size="sm" onClick={() => setGrid(autoSolve())}>
+            自動で組む
+          </Btn>
+          {totalViolations === 0 && grid.flat().some(Boolean) && (
+            <span style={{
+              fontFamily: F_MONO, fontSize: 12, color: C.green,
+              padding: '0.4rem 0.8rem', background: C.greenLight, border: `1px solid ${C.green}`,
+            }}>
+              ✓ 全制約クリア
+            </span>
+          )}
+        </div>
+      </Card>
+
+      <SectionTitle num="4.1">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="SCHEDULING / 整数計画">
+          <div>
+            <span style={{ color: C.chalkSoft }}>変数：</span>
+            x<sub>i,d</sub> ∈ {'{0, 1}'}　
+            <span style={{ color: C.chalkSoft }}>（スタッフ i が 日 d に出勤するか）</span>
+          </div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> x<sub>i,d</sub> ≥ 2　 ∀d<span style={{ color: C.chalkSoft }}>  （各日2人以上）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>d</sub> x<sub>i,d</sub> ≤ 3　 ∀i<span style={{ color: C.chalkSoft }}>  （各人3日まで）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>x<sub>i,d</sub> = 0　 (i,d が NG)<span style={{ color: C.chalkSoft }}>  （希望休）</span></div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.85 }}>
+          目的関数を「制約を全部満たす」だけにすれば <b>充足問題</b>。
+          実務ではここに「公平性（出勤日数のばらつき最小化）」「希望シフトの達成度」「人件費最小化」などが目的関数として加わる。
+          複数の目的が競合するため、トレードオフを数式で扱うことになる。
+        </p>
+      </Card>
+
+      <SectionTitle num="4.2">ポイント</SectionTitle>
+      <Card style={{ background: C.greenLight, borderColor: C.green }}>
+        <p style={{ fontFamily: F_BODY, fontSize: 14.5, color: C.ink, lineHeight: 1.85 }}>
+          4人 × 5日 でも組み合わせは 2<sup>20</sup> ≈ 100万通り。
+          手で全探索するのは現実的でないが、制約を適切に書けばソルバーは数秒で解ける。
+          これが実務で数理最適化が使われる理由。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === SET COVER MODULE =================================================
+
+function SetCoverView() {
+  const GW = 4, GH = 3;
+  const cells = useMemo(() => {
+    const cs = [];
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) cs.push({ x, y, id: y * GW + x });
+    return cs;
+  }, []);
+  const cands = useMemo(() => [
+    { id: 0, x: 0,   y: 0, name: 'A' },
+    { id: 1, x: 3,   y: 0, name: 'B' },
+    { id: 2, x: 1.5, y: 1, name: 'C' },
+    { id: 3, x: 0,   y: 2, name: 'D' },
+    { id: 4, x: 3,   y: 2, name: 'E' },
+    { id: 5, x: 1,   y: 0, name: 'F' },
+  ], []);
+  const RADIUS = 2;
+
+  const coverSets = useMemo(() => cands.map((c) =>
+    cells.filter((cell) => Math.abs(cell.x - c.x) + Math.abs(cell.y - c.y) <= RADIUS).map((cell) => cell.id)
+  ), [cands, cells]);
+
+  const [open, setOpen] = useState(new Set());
+  const [reveal, setReveal] = useState(null);
+
+  const optResult = useMemo(() => {
+    let bestSize = 99, bestMask = -1;
+    for (let m = 1; m < (1 << cands.length); m++) {
+      const covered = new Set(); let count = 0;
+      for (let i = 0; i < cands.length; i++) if (m & (1 << i)) { count++; coverSets[i].forEach((c) => covered.add(c)); }
+      if (covered.size === cells.length && count < bestSize) { bestSize = count; bestMask = m; }
+    }
+    const sel = new Set();
+    for (let i = 0; i < cands.length; i++) if (bestMask & (1 << i)) sel.add(i);
+    return { selected: sel, count: bestSize };
+  }, [cands, cells, coverSets]);
+
+  const greedyResult = useMemo(() => {
+    const remaining = new Set(cells.map((c) => c.id));
+    const sel = new Set();
+    while (remaining.size > 0) {
+      let best = -1, bestCnt = 0;
+      for (let i = 0; i < cands.length; i++) {
+        if (sel.has(i)) continue;
+        const cnt = coverSets[i].filter((c) => remaining.has(c)).length;
+        if (cnt > bestCnt) { bestCnt = cnt; best = i; }
+      }
+      if (best < 0) break;
+      sel.add(best);
+      coverSets[best].forEach((c) => remaining.delete(c));
+    }
+    return { selected: sel, count: sel.size };
+  }, [cands, cells, coverSets]);
+
+  const showSet = reveal === 'opt' ? optResult.selected
+                 : reveal === 'greedy' ? greedyResult.selected
+                 : open;
+
+  const coveredCells = useMemo(() => {
+    const c = new Set();
+    showSet.forEach((i) => coverSets[i].forEach((id) => c.add(id)));
+    return c;
+  }, [showSet, coverSets]);
+
+  const allCovered = coveredCells.size === cells.length;
+  const cellCoverCount = (cellId) => {
+    let n = 0;
+    showSet.forEach((i) => { if (coverSets[i].includes(cellId)) n++; });
+    return n;
+  };
+
+  const toggle = (id) => {
+    const next = new Set(open);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setOpen(next);
+    setReveal(null);
+  };
+
+  const SW = 560, SH = 420, M = 40;
+  const cw = (SW - 2 * M) / GW;
+  const ch = (SH - 2 * M) / GH;
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 05" title="消防署を配置する" subtitle="SET COVER PROBLEM" accent={C.red} />
+
+      <Story>
+        町の全エリア（4×3 = 12 区画）を消防署でカバーする。<br />
+        消防署候補は <b>6箇所</b>、各候補は半径2（マンハッタン距離）の範囲をカバーする。<br />
+        全エリアをカバーする <b>最少の消防署数</b>を求める。
+      </Story>
+
+      <Card accent={C.red}>
+        <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            {cells.map((cell) => {
+              const cx = M + (cell.x + 0.5) * cw, cy = M + (cell.y + 0.5) * ch;
+              const cnt = cellCoverCount(cell.id);
+              const fill = cnt === 0 ? C.boardLight : cnt === 1 ? C.redLight : '#f3b9b3';
+              const stroke = cnt === 0 ? '#cccccc' : C.red;
+              return (
+                <g key={cell.id}>
+                  <rect
+                    x={cx - cw / 2 + 2} y={cy - ch / 2 + 2}
+                    width={cw - 4} height={ch - 4}
+                    fill={fill} stroke={stroke} strokeWidth={cnt === 0 ? 1 : 1.5}
+                    strokeDasharray={cnt === 0 ? '3 3' : '0'}
+                  />
+                  <text x={cx} y={cy + 4} textAnchor="middle"
+                    style={{ fontFamily: F_MONO, fontSize: 10, fill: cnt === 0 ? C.inkLight : C.redDeep }}>
+                    {cell.x},{cell.y}
+                  </text>
+                </g>
+              );
+            })}
+
+            {cands.map((c) => {
+              const isOpen = showSet.has(c.id);
+              const cx = M + (c.x + 0.5) * cw, cy = M + (c.y + 0.5) * ch;
+              return (
+                <g key={c.id}>
+                  {isOpen && (
+                    <polygon
+                      points={(() => {
+                        const r = RADIUS * cw;
+                        const rh = RADIUS * ch;
+                        return `${cx},${cy - rh} ${cx + r},${cy} ${cx},${cy + rh} ${cx - r},${cy}`;
+                      })()}
+                      fill={C.red} fillOpacity={0.06}
+                      stroke={C.red} strokeWidth={1.2} opacity={0.5}
+                      strokeDasharray="4 3"
+                    />
+                  )}
+                  <circle cx={cx} cy={cy} r={16}
+                    fill={isOpen ? C.red : C.page}
+                    stroke={isOpen ? C.redDeep : C.frame} strokeWidth={2} />
+                  <text x={cx} y={cy + 5} textAnchor="middle"
+                    style={{ fontFamily: F_DISP, fontSize: 16, fontWeight: 600, fill: isOpen ? C.page : C.ink }}>
+                    {c.name}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="md:col-span-2">
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 8 }}>
+              候補をクリックで開設/閉鎖
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {cands.map((c) => {
+                const isOpen = showSet.has(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => toggle(c.id)}
+                    disabled={!!reveal}
+                    style={{
+                      width: 56, height: 56,
+                      background: isOpen ? C.red : C.page,
+                      color: isOpen ? C.page : C.ink,
+                      border: `1.5px solid ${isOpen ? C.redDeep : C.frame}`,
+                      fontFamily: F_DISP, fontSize: 20, fontWeight: 600,
+                      cursor: reveal ? 'not-allowed' : 'pointer',
+                      opacity: reveal ? (isOpen ? 1 : 0.4) : 1,
+                    }}
+                  >{c.name}</button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-4 flex-wrap">
+              <Btn variant="ghost" size="sm" onClick={() => { setOpen(new Set()); setReveal(null); }}>リセット</Btn>
+              <Btn variant="soft" size="sm" onClick={() => setReveal(reveal === 'greedy' ? null : 'greedy')}>
+                {reveal === 'greedy' ? '元に戻す' : '貪欲解を見る'}
+              </Btn>
+              <Btn variant="primary" size="sm" onClick={() => setReveal(reveal === 'opt' ? null : 'opt')}>
+                {reveal === 'opt' ? '元に戻す' : '最適解を見る'}
+              </Btn>
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board, color: C.chalk, padding: '1rem',
+            border: `4px solid ${C.frame}`, borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              {reveal === 'opt' ? 'OPTIMAL' : reveal === 'greedy' ? 'GREEDY' : 'STATUS'}
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span style={{ fontFamily: F_DISP, fontSize: '2.4rem', fontWeight: 600, color: allCovered ? C.chalkGreen : C.chalkPink }}>
+                {showSet.size}
+              </span>
+              <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft }}>消防署</span>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, marginTop: 4 }}>
+              カバー: {coveredCells.size}/{cells.length}
+              {allCovered && <span style={{ color: C.chalkGreen }}> ✓ 全カバー</span>}
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft, marginTop: 12, paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}` }}>
+              最適: {optResult.count} / 貪欲: {greedyResult.count}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="5.1">貪欲法と最適解の比較</SectionTitle>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card style={{ background: C.yellowLight, borderColor: C.yellow }}>
+          <Tag bg={C.yellow} color={C.paperLight}>GREEDY / 貪欲法</Tag>
+          <div style={{ fontFamily: F_DISP, fontSize: '2rem', fontWeight: 600, color: C.ink, marginTop: 8 }}>
+            {greedyResult.count} <span style={{ fontSize: '1rem', color: C.inkLight }}>箇所</span>
+          </div>
+          <p style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
+            未カバーのエリアを最も多くカバーできる候補を順に選ぶ戦略。最初に最も広い候補を選ぶが、結果的に追加で2つ必要になる。
+          </p>
+        </Card>
+        <Card style={{ background: C.greenLight, borderColor: C.green }}>
+          <Tag bg={C.green} color={C.paperLight}>OPTIMAL / 最適解</Tag>
+          <div style={{ fontFamily: F_DISP, fontSize: '2rem', fontWeight: 600, color: C.ink, marginTop: 8 }}>
+            {optResult.count} <span style={{ fontSize: '1rem', color: C.inkLight }}>箇所</span>
+          </div>
+          <p style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
+            全 64 通り（=2<sup>6</sup>）を試して得た最少数。広い候補に頼らず、相補的にカバー領域が重ならない2つを選ぶことで全エリアをカバー。
+          </p>
+        </Card>
+      </div>
+
+      <SectionTitle num="5.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="SET COVER / 整数計画">
+          <div>
+            <span style={{ color: C.chalkSoft }}>変数：</span>
+            x<sub>i</sub> ∈ {'{0, 1}'}<span style={{ color: C.chalkSoft }}>　（候補 i を開設するか）</span>
+          </div>
+          <div style={{ marginTop: 8, color: C.chalkGreen, fontWeight: 500 }}>minimize</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> x<sub>i</sub><span style={{ color: C.chalkSoft }}>　（開設数を最小化）</span></div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i ∈ S<sub>j</sub></sub> x<sub>i</sub> ≥ 1　∀j<span style={{ color: C.chalkSoft }}>　（各エリア j は1箇所以上にカバーされる）</span></div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.85 }}>
+          消防署・救急車・基地局・センサー配置など、<b>「最少のリソースで全範囲をカバーする」</b> 課題に共通する構造。
+          NP困難な問題だが、貪欲法は <b>近似比 ln(n)</b> を持つことが知られている（n=エリア数）。
+          実用には <b>分枝限定法</b> や <b>MIPソルバー</b> が用いられる。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === FACILITY LOCATION MODULE =========================================
+
+function FacilityView() {
+  const warehouses = useMemo(() => [
+    { id: 0, name: 'W1', x: 1, y: 1, fixed: 60 },
+    { id: 1, name: 'W2', x: 5, y: 1, fixed: 70 },
+    { id: 2, name: 'W3', x: 3, y: 3, fixed: 90 },
+    { id: 3, name: 'W4', x: 5, y: 4, fixed: 65 },
+  ], []);
+  const demands = useMemo(() => [
+    { id: 0, name: 'D1', x: 0, y: 0, demand: 12 },
+    { id: 1, name: 'D2', x: 5, y: 0, demand: 18 },
+    { id: 2, name: 'D3', x: 1, y: 4, demand: 10 },
+    { id: 3, name: 'D4', x: 5, y: 4, demand: 15 },
+    { id: 4, name: 'D5', x: 6, y: 2, demand: 8 },
+  ], []);
+
+  const dist = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+
+  const [open, setOpen] = useState(new Set([0]));
+  const [reveal, setReveal] = useState(false);
+
+  const compute = (selected) => {
+    if (selected.size === 0) return { fixed: 0, trans: 0, total: 0, assign: [], feasible: false };
+    let fixed = 0;
+    selected.forEach((i) => fixed += warehouses[i].fixed);
+    let trans = 0;
+    const assign = [];
+    for (const d of demands) {
+      let bestW = -1, bestC = Infinity;
+      selected.forEach((i) => {
+        const c = dist(warehouses[i], d) * d.demand;
+        if (c < bestC) { bestC = c; bestW = i; }
+      });
+      trans += bestC;
+      assign.push(bestW);
+    }
+    return { fixed, trans, total: fixed + trans, assign, feasible: true };
+  };
+
+  const optResult = useMemo(() => {
+    let best = { total: Infinity, mask: -1 };
+    for (let m = 1; m < (1 << warehouses.length); m++) {
+      const sel = new Set();
+      for (let i = 0; i < warehouses.length; i++) if (m & (1 << i)) sel.add(i);
+      const r = compute(sel);
+      if (r.total < best.total) best = { total: r.total, mask: m, ...r };
+    }
+    const optSet = new Set();
+    for (let i = 0; i < warehouses.length; i++) if (best.mask & (1 << i)) optSet.add(i);
+    return { selected: optSet, ...best };
+  }, [warehouses, demands]);
+
+  const showSet = reveal ? optResult.selected : open;
+  const result = compute(showSet);
+
+  const toggle = (id) => {
+    const next = new Set(open);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setOpen(next);
+    setReveal(false);
+  };
+
+  const SW = 560, SH = 420, M = 40;
+  const sx = (x) => M + (x / 6) * (SW - 2 * M);
+  const sy = (y) => SH - M - (y / 4) * (SH - 2 * M);
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 06" title="倉庫を建てる" subtitle="FACILITY LOCATION" accent={C.yellow} />
+
+      <Story>
+        4つの倉庫候補から建設地を選び、5つの需要点へ配送する。<br />
+        各候補には<b>固定費</b>（建設・運用コスト）が、配送には<b>輸送費</b>（距離 × 需要量）がかかる。<br />
+        固定費と輸送費の合計を最小にする組み合わせを求める。
+      </Story>
+
+      <Card accent={C.yellow}>
+        <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem', marginBottom: '1rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            {[0, 1, 2, 3, 4, 5, 6].map((x) => (
+              <line key={`gx${x}`} x1={sx(x)} y1={sy(0)} x2={sx(x)} y2={sy(4)} stroke="#eee" strokeWidth={0.5} />
+            ))}
+            {[0, 1, 2, 3, 4].map((y) => (
+              <line key={`gy${y}`} x1={sx(0)} y1={sy(y)} x2={sx(6)} y2={sy(y)} stroke="#eee" strokeWidth={0.5} />
+            ))}
+
+            {result.feasible && demands.map((d, di) => {
+              const wi = result.assign[di];
+              if (wi === undefined || wi < 0) return null;
+              const w = warehouses[wi];
+              return (
+                <line key={`l${di}`}
+                  x1={sx(w.x)} y1={sy(w.y)} x2={sx(d.x)} y2={sy(d.y)}
+                  stroke={C.yellow} strokeWidth={1.5} opacity={0.5} strokeDasharray="4 2" />
+              );
+            })}
+
+            {warehouses.map((w) => {
+              const isOpen = showSet.has(w.id);
+              return (
+                <g key={w.id}>
+                  <rect
+                    x={sx(w.x) - 22} y={sy(w.y) - 18}
+                    width={44} height={36}
+                    fill={isOpen ? C.yellow : C.page}
+                    stroke={isOpen ? C.yellowDeep : C.frame}
+                    strokeWidth={2}
+                    strokeDasharray={isOpen ? '0' : '4 3'}
+                  />
+                  <text x={sx(w.x)} y={sy(w.y) - 3} textAnchor="middle"
+                    style={{ fontFamily: F_DISP, fontSize: 14, fontWeight: 600, fill: isOpen ? C.page : C.ink }}>
+                    {w.name}
+                  </text>
+                  <text x={sx(w.x)} y={sy(w.y) + 11} textAnchor="middle"
+                    style={{ fontFamily: F_MONO, fontSize: 9, fill: isOpen ? C.page : C.inkLight }}>
+                    ¥{w.fixed}
+                  </text>
+                </g>
+              );
+            })}
+
+            {demands.map((d) => (
+              <g key={d.id}>
+                <circle cx={sx(d.x)} cy={sy(d.y)} r={14} fill={C.page} stroke={C.ink} strokeWidth={1.5} />
+                <text x={sx(d.x)} y={sy(d.y) + 4} textAnchor="middle"
+                  style={{ fontFamily: F_DISP, fontSize: 11, fontWeight: 600, fill: C.ink }}>
+                  {d.name}
+                </text>
+                <text x={sx(d.x)} y={sy(d.y) + 26} textAnchor="middle"
+                  style={{ fontFamily: F_MONO, fontSize: 9, fill: C.inkLight }}>
+                  {d.demand}個
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 8 }}>
+              倉庫を開設/閉鎖
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {warehouses.map((w) => {
+                const isOpen = showSet.has(w.id);
+                return (
+                  <button
+                    key={w.id}
+                    onClick={() => toggle(w.id)}
+                    disabled={reveal}
+                    style={{
+                      padding: '0.5rem 0.7rem',
+                      background: isOpen ? C.yellow : C.page,
+                      color: isOpen ? C.page : C.ink,
+                      border: `1.5px solid ${isOpen ? C.yellowDeep : C.frame}`,
+                      fontFamily: F_MONO, fontSize: 12,
+                      cursor: reveal ? 'not-allowed' : 'pointer',
+                      opacity: reveal ? (isOpen ? 1 : 0.4) : 1,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontFamily: F_DISP, fontSize: 14, fontWeight: 600 }}>{w.name}</div>
+                    <div style={{ fontSize: 10, marginTop: 2 }}>¥{w.fixed}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-4 flex-wrap">
+              <Btn variant="ghost" size="sm" onClick={() => { setOpen(new Set()); setReveal(false); }}>すべて閉鎖</Btn>
+              <Btn variant="soft" size="sm" onClick={() => { setOpen(new Set([0, 1, 2, 3])); setReveal(false); }}>すべて開設</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setReveal(!reveal)}>
+                {reveal ? '元に戻す' : '最適解を見る'}
+              </Btn>
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board, color: C.chalk, padding: '1rem',
+            border: `4px solid ${C.frame}`, borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              {reveal ? 'OPTIMAL COST' : 'YOUR COST'}
+            </div>
+            <div className="mt-1">
+              <span style={{ fontFamily: F_DISP, fontSize: '2.2rem', fontWeight: 600, color: reveal ? C.chalkYellow : C.chalk }}>
+                ¥{result.feasible ? result.total : '—'}
+              </span>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, marginTop: 6, lineHeight: 1.7 }}>
+              固定費: ¥{result.fixed}<br />
+              輸送費: ¥{result.trans}
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft, marginTop: 12, paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}` }}>
+              最適: ¥{optResult.total}（あと <b style={{ color: result.feasible && result.total > optResult.total ? C.chalkYellow : C.chalkGreen }}>¥{result.feasible ? Math.max(0, result.total - optResult.total) : '—'}</b> 削減可）
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="6.1">トレードオフの構造</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          倉庫を多く建てれば<b>輸送費</b>は下がるが<b>固定費</b>が増える。少なく建てれば固定費は減るが輸送費が増える。
+          このトレードオフを定量的に解くのが施設配置問題。
+          このケースでは <b>W1 と W2 の2箇所</b> 開設が最適（合計 ¥{optResult.total}）で、すべて開設（¥373）や単独開設（最良でも ¥291）より安い。
+        </p>
+      </Card>
+
+      <SectionTitle num="6.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="FACILITY LOCATION / MIP">
+          <div>
+            <span style={{ color: C.chalkSoft }}>変数：</span>
+            y<sub>i</sub> ∈ {'{0, 1}'}<span style={{ color: C.chalkSoft }}>　（倉庫 i を開設するか）</span>
+          </div>
+          <div style={{ paddingLeft: '3.5em' }}>x<sub>ij</sub> ≥ 0<span style={{ color: C.chalkSoft }}>　（倉庫 i から需要点 j への輸送量）</span></div>
+          <div style={{ marginTop: 8, color: C.chalkGreen, fontWeight: 500 }}>minimize</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> f<sub>i</sub> · y<sub>i</sub><span style={{ color: C.chalkSoft }}> + </span>Σ<sub>i,j</sub> c<sub>ij</sub> · x<sub>ij</sub></div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> x<sub>ij</sub> = d<sub>j</sub>　∀j<span style={{ color: C.chalkSoft }}>　（需要を満たす）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>x<sub>ij</sub> ≤ M · y<sub>i</sub>　∀i,j<span style={{ color: C.chalkSoft }}>　（閉鎖中は使えない）</span></div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.85 }}>
+          整数変数（開設するかしないか）と連続変数（輸送量）が混在する <b>混合整数計画（MIP）</b> の典型例。
+          物流センター・データセンター・店舗・基地局・サービス拠点の配置に幅広く応用される。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === PORTFOLIO MODULE =================================================
+
+const ASSETS = [
+  { name: '株A',  ret: 0.12, sigma: 0.25, label: 'グロース株', color: '#a93128' },
+  { name: '株B',  ret: 0.08, sigma: 0.18, label: 'バリュー株', color: '#cb6a14' },
+  { name: '債券', ret: 0.04, sigma: 0.05, label: '国債',       color: '#1d4664' },
+  { name: '金',   ret: 0.06, sigma: 0.20, label: 'ゴールド',   color: '#345a3b' },
+];
+const CORR = [
+  [1.00,  0.70, -0.10,  0.10],
+  [0.70,  1.00, -0.05,  0.15],
+  [-0.10, -0.05, 1.00, -0.20],
+  [0.10,  0.15, -0.20,  1.00],
+];
+
+function PortfolioView() {
+  const cov = useMemo(() => CORR.map((row, i) => row.map((c, j) => c * ASSETS[i].sigma * ASSETS[j].sigma)), []);
+
+  const portRet = (w) => w.reduce((s, wi, i) => s + wi * ASSETS[i].ret, 0);
+  const portVar = (w) => {
+    let v = 0;
+    for (let i = 0; i < w.length; i++) for (let j = 0; j < w.length; j++) v += w[i] * w[j] * cov[i][j];
+    return v;
+  };
+  const portStd = (w) => Math.sqrt(portVar(w));
+
+  const cloudPoints = useMemo(() => {
+    const pts = [];
+    for (let k = 0; k < 1500; k++) {
+      let w = ASSETS.map(() => Math.random());
+      const s = w.reduce((a, b) => a + b, 0);
+      w = w.map((x) => x / s);
+      pts.push({ w, ret: portRet(w), std: portStd(w) });
+    }
+    return pts;
+  }, []);
+
+  const frontier = useMemo(() => {
+    const pts = [];
+    for (let k = 0; k < 30000; k++) {
+      let w = ASSETS.map(() => Math.random());
+      const s = w.reduce((a, b) => a + b, 0);
+      w = w.map((x) => x / s);
+      pts.push({ w, ret: portRet(w), std: portStd(w) });
+    }
+    const bins = {};
+    for (const p of pts) {
+      const b = Math.round(p.ret * 200) / 200;
+      if (!bins[b] || bins[b].std > p.std) bins[b] = p;
+    }
+    const fr = Object.keys(bins).map((k) => bins[k]).sort((a, b) => a.std - b.std);
+    const minVar = fr.reduce((a, b) => (a.std < b.std ? a : b));
+    return fr.filter((p) => p.ret >= minVar.ret);
+  }, []);
+
+  const [risk, setRisk] = useState(50);
+  const minStd = Math.min(...frontier.map((p) => p.std));
+  const maxStd = Math.max(...frontier.map((p) => p.std));
+  const targetStd = minStd + (risk / 100) * (maxStd - minStd);
+  const selected = frontier.reduce((a, b) =>
+    Math.abs(a.std - targetStd) < Math.abs(b.std - targetStd) ? a : b
+  );
+
+  const SW = 580, SH = 380, M = 50;
+  const stdMax = 0.30, retMax = 0.13;
+  const sx = (x) => M + (x / stdMax) * (SW - 2 * M);
+  const sy = (y) => SH - M - (y / retMax) * (SH - 2 * M);
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 07" title="資産を運用する" subtitle="PORTFOLIO OPTIMIZATION" accent={C.blue} />
+
+      <Story>
+        4種類の資産にどう資金を配分するか。<br />
+        期待リターンが高い資産はリスク（標準偏差）も大きい。<br />
+        リスクとリターンのバランスを取る最適な配分を求める。
+      </Story>
+
+      <Card accent={C.blue}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {ASSETS.map((a, i) => (
+            <div key={i} style={{
+              background: C.boardLight, border: `1px solid ${C.pageEdge}`,
+              borderTop: `3px solid ${a.color}`, padding: '0.7rem 0.8rem',
+            }}>
+              <div style={{ fontFamily: F_DISP, fontSize: 16, fontWeight: 600, color: C.ink }}>
+                {a.name} <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, fontWeight: 400 }}>· {a.label}</span>
+              </div>
+              <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkSoft, marginTop: 4, lineHeight: 1.5 }}>
+                期待リターン: <b>{(a.ret * 100).toFixed(1)}%</b><br />
+                リスク (σ): <b>{(a.sigma * 100).toFixed(1)}%</b>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            {[0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30].map((x) => (
+              <g key={`gx${x}`}>
+                <line x1={sx(x)} y1={sy(0)} x2={sx(x)} y2={sy(retMax)} stroke="#eee" strokeWidth={0.5} />
+                <text x={sx(x)} y={sy(0) + 14} textAnchor="middle"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.inkLight }}>
+                  {(x * 100).toFixed(0)}%
+                </text>
+              </g>
+            ))}
+            {[0, 0.04, 0.08, 0.12].map((y) => (
+              <g key={`gy${y}`}>
+                <line x1={sx(0)} y1={sy(y)} x2={sx(stdMax)} y2={sy(y)} stroke="#eee" strokeWidth={0.5} />
+                <text x={sx(0) - 6} y={sy(y) + 3} textAnchor="end"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.inkLight }}>
+                  {(y * 100).toFixed(0)}%
+                </text>
+              </g>
+            ))}
+            <line x1={sx(0)} y1={sy(0)} x2={sx(stdMax)} y2={sy(0)} stroke={C.ink} strokeWidth={1.2} />
+            <line x1={sx(0)} y1={sy(0)} x2={sx(0)} y2={sy(retMax)} stroke={C.ink} strokeWidth={1.2} />
+            <text x={sx(stdMax) - 4} y={sy(0) + 28} textAnchor="end"
+              style={{ fontFamily: F_DISP, fontSize: 12, fill: C.ink, fontStyle: 'italic' }}>
+              リスク (σ)
+            </text>
+            <text x={sx(0) + 8} y={sy(retMax) + 4}
+              style={{ fontFamily: F_DISP, fontSize: 12, fill: C.ink, fontStyle: 'italic' }}>
+              期待リターン
+            </text>
+
+            {cloudPoints.map((p, i) => (
+              <circle key={i} cx={sx(p.std)} cy={sy(p.ret)} r={1.2} fill={C.inkLighter} opacity={0.5} />
+            ))}
+
+            <polyline
+              points={frontier.map((p) => `${sx(p.std)},${sy(p.ret)}`).join(' ')}
+              fill="none" stroke={C.blue} strokeWidth={2.5}
+            />
+            {frontier.length > 0 && (
+              <text
+                x={sx(frontier[Math.floor(frontier.length * 0.7)].std) + 8}
+                y={sy(frontier[Math.floor(frontier.length * 0.7)].ret) - 8}
+                style={{ fontFamily: F_DISP, fontSize: 12, fill: C.blue, fontStyle: 'italic' }}
+              >
+                効率的フロンティア
+              </text>
+            )}
+
+            {ASSETS.map((a, i) => (
+              <g key={i}>
+                <circle cx={sx(a.sigma)} cy={sy(a.ret)} r={5} fill={a.color} stroke={C.page} strokeWidth={1.5} />
+                <text x={sx(a.sigma) + 8} y={sy(a.ret) + 4}
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: a.color, fontWeight: 500 }}>
+                  {a.name}
+                </text>
+              </g>
+            ))}
+
+            <circle cx={sx(selected.std)} cy={sy(selected.ret)} r={9} fill={C.yellow} stroke={C.yellowDeep} strokeWidth={2} />
+            <circle cx={sx(selected.std)} cy={sy(selected.ret)} r={16} fill="none" stroke={C.yellow} strokeWidth={1.5} opacity={0.4}>
+              <animate attributeName="r" values="9;20" dur="1.6s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.5;0" dur="1.6s" repeatCount="indefinite" />
+            </circle>
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="md:col-span-2 space-y-3">
+            <Slider
+              label="リスク許容度（左：保守的 → 右：積極的）"
+              value={risk} onChange={setRisk}
+              min={0} max={100} suffix="" color={C.blue}
+            />
+            <div style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, lineHeight: 1.6 }}>
+              スライダーを動かすと効率的フロンティア上の点を移動する。各位置で対応する資産配分が右に表示される。
+            </div>
+            <div className="mt-3">
+              <div style={{ display: 'flex', height: 28, border: `1px solid ${C.pageEdge}` }}>
+                {selected.w.map((wi, i) => (
+                  <div key={i} style={{
+                    width: `${wi * 100}%`,
+                    background: ASSETS[i].color,
+                    color: C.page,
+                    fontFamily: F_MONO, fontSize: 10, textAlign: 'center', lineHeight: '28px',
+                    overflow: 'hidden',
+                  }}>
+                    {wi > 0.06 ? `${(wi * 100).toFixed(0)}%` : ''}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between mt-1 flex-wrap gap-x-3" style={{ fontFamily: F_MONO, fontSize: 10 }}>
+                {ASSETS.map((a, i) => (
+                  <span key={i} style={{ color: a.color }}>● {a.name} {(selected.w[i] * 100).toFixed(0)}%</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board, color: C.chalk, padding: '1rem',
+            border: `4px solid ${C.frame}`, borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              CURRENT POINT
+            </div>
+            <div className="mt-2" style={{ fontFamily: F_MONO, fontSize: 13 }}>
+              <div style={{ color: C.chalkSoft, fontSize: 11 }}>期待リターン</div>
+              <div style={{ color: C.chalkGreen, fontSize: 22, fontWeight: 600 }}>
+                {(selected.ret * 100).toFixed(2)}%
+              </div>
+            </div>
+            <div className="mt-2" style={{ fontFamily: F_MONO, fontSize: 13 }}>
+              <div style={{ color: C.chalkSoft, fontSize: 11 }}>リスク (σ)</div>
+              <div style={{ color: C.chalkPink, fontSize: 22, fontWeight: 600 }}>
+                {(selected.std * 100).toFixed(2)}%
+              </div>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft, marginTop: 12, paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}`, lineHeight: 1.6 }}>
+              シャープ比 (rf=0): <b>{(selected.ret / selected.std).toFixed(2)}</b>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="7.1">分散効果と効率的フロンティア</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          単一資産だけ持つと（図中の色付き点）リスクは資産ごとの σ になるが、
+          複数資産を組み合わせると<b>分散効果</b>により同じリターンでもより低リスクが達成できる。
+          <b>効率的フロンティア</b>は「あるリターン水準で最小リスクの配分」をつないだ曲線で、その上の点が合理的な選択肢になる。
+        </p>
+      </Card>
+
+      <SectionTitle num="7.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <Card>
+        <Equation label="MEAN-VARIANCE / 二次計画 (QP)">
+          <div>
+            <span style={{ color: C.chalkSoft }}>変数：</span>
+            w<sub>i</sub> ≥ 0<span style={{ color: C.chalkSoft }}>　（資産 i への配分比率）</span>
+          </div>
+          <div style={{ marginTop: 8, color: C.chalkGreen, fontWeight: 500 }}>minimize</div>
+          <div style={{ paddingLeft: '1.5em' }}>w<sup>T</sup> Σ w<span style={{ color: C.chalkSoft }}>　（ポートフォリオ分散）</span></div>
+          <div style={{ marginTop: 8, color: C.chalkPink, fontWeight: 500 }}>subject to</div>
+          <div style={{ paddingLeft: '1.5em' }}>μ<sup>T</sup> w ≥ R<sub>target</sub><span style={{ color: C.chalkSoft }}>　（目標リターン以上）</span></div>
+          <div style={{ paddingLeft: '1.5em' }}>Σ<sub>i</sub> w<sub>i</sub> = 1<span style={{ color: C.chalkSoft }}>　（合計100%）</span></div>
+        </Equation>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginTop: 12, lineHeight: 1.85 }}>
+          目的関数が変数の<b>2次式</b>（共分散行列を含む）になる問題は <b>二次計画 (QP)</b>。LP の自然な拡張で、解析解または専用ソルバー（CVXOPT, OSQP, Gurobi 等）で解ける。
+          1952年の Markowitz による定式化が現代ポートフォリオ理論の出発点。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+
+function StatusBox({ label, value, unit, bad, warn }) {
+  const color = bad ? (warn ? C.yellowDeep : C.red) : C.green;
+  const bg = bad ? (warn ? C.yellowLight : C.redLight) : C.greenLight;
+  return (
+    <div style={{ background: bg, border: `1px solid ${color}`, padding: '0.6rem 0.8rem' }}>
+      <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.1em' }}>{label}</div>
+      <div style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color, marginTop: 2 }}>
+        {value} <span style={{ fontSize: '0.75rem', color: C.inkSoft }}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+// === HEADER + APP =====================================================
+
+function Header({ view, setView }) {
+  const tabs = [
+    { id: 'home', label: 'はじめに' },
+    { id: 'lp', label: '01 LP' },
+    { id: 'knapsack', label: '02 ナップサック' },
+    { id: 'transport', label: '03 輸送' },
+    { id: 'shift', label: '04 シフト' },
+    { id: 'setcover', label: '05 集合被覆' },
+    { id: 'facility', label: '06 施設配置' },
+    { id: 'portfolio', label: '07 ポートフォリオ' },
+  ];
+  return (
+    <header
+      style={{
+        background: `${C.page}f0`,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderBottom: `1px solid ${C.pageEdge}`,
+        position: 'sticky', top: 0, zIndex: 10,
+      }}
+    >
+      <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-3">
+        <button
+          onClick={() => setView('home')}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+            fontFamily: F_DISP, fontSize: 16, fontWeight: 600, color: C.ink,
+            letterSpacing: '0.02em',
+          }}
+        >
+          OPTIMIZATION LAB <span style={{ color: C.red }}>·</span>
+        </button>
+        <nav className="flex gap-1 flex-wrap">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setView(t.id)}
+              style={{
+                background: view === t.id ? C.ink : 'transparent',
+                color: view === t.id ? C.paper : C.inkSoft,
+                border: 'none',
+                padding: '0.4rem 0.8rem',
+                fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.04em',
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+export default function App() {
+  const [view, setView] = useState('home');
+  const styles = `
+    @import url('https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+    body, html { background: ${C.page}; }
+    input[type="range"] { accent-color: ${C.ink}; }
+  `;
+  return (
+    <div
+      style={{
+        background: C.page, color: C.ink, fontFamily: F_BODY,
+        minHeight: '100vh',
+        position: 'relative',
+      }}
+    >
+      <style>{styles}</style>
+      <Header view={view} setView={setView} />
+      <main className="max-w-5xl mx-auto px-6 py-10">
+        {view === 'home' && <HomeView go={setView} />}
+        {view === 'lp' && <LPView />}
+        {view === 'knapsack' && <KnapsackView />}
+        {view === 'transport' && <TransportView />}
+        {view === 'shift' && <ShiftView />}
+        {view === 'setcover' && <SetCoverView />}
+        {view === 'facility' && <FacilityView />}
+        {view === 'portfolio' && <PortfolioView />}
+      </main>
+      <footer
+        className="max-w-5xl mx-auto px-6 py-8"
+        style={{
+          borderTop: `1px solid ${C.pageEdge}`, marginTop: '3rem',
+          fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.08em',
+        }}
+      >
+        OPTIMIZATION LAB — 触って学ぶ数理最適化 / built with React
+      </footer>
+    </div>
+  );
+}
