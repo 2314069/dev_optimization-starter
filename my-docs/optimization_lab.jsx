@@ -322,6 +322,14 @@ function SectionTitle({ children, num }) {
 
 const MODULES = [
   {
+    id: 'intro',
+    no: '00',
+    title: 'お弁当を作る',
+    sub: '最適化って何？ — 言葉の導入',
+    blurb: '20分でお弁当を作る。4種類のおかずから「いくつ作るか」を決めて、満足度を最大化する。数式の前に、決定変数・目的関数・制約条件を体感する。',
+    accent: C.green,
+  },
+  {
     id: 'lp',
     no: '01',
     title: '工場の社長になる',
@@ -402,7 +410,7 @@ function HomeView({ go }) {
             fontFamily: F_DISP, fontSize: '1.1rem', lineHeight: 1.85, color: C.inkSoft,
           }}
         >
-          制約のもとで目的を最大化（最小化）する考え方を、4つの題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。
+          制約のもとで目的を最大化（最小化）する考え方を、身近な題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。
         </p>
       </div>
 
@@ -445,7 +453,7 @@ function HomeView({ go }) {
       {/* Module cards */}
       <div className="mb-4">
         <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.15em' }}>
-          LESSONS / 4つのレッスン
+          LESSONS / 全レッスン
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -504,6 +512,222 @@ function HomeView({ go }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// === INTRO MODULE =====================================================
+
+const DISHES = [
+  { id: 0, name: '卵焼き',       time: 5, joy: 8,  max: 3, color: C.chalkYellow, slider: C.yellow },
+  { id: 1, name: 'からあげ',     time: 6, joy: 12, max: 3, color: C.chalkPink,   slider: C.red },
+  { id: 2, name: 'ブロッコリー', time: 2, joy: 4,  max: 4, color: C.chalkGreen,  slider: C.green },
+  { id: 3, name: 'ごはん詰め',   time: 3, joy: 6,  max: 2, color: C.chalkBlue,   slider: C.blue },
+];
+const TIME_BUDGET = 20;
+
+function bruteForceLunch() {
+  let best = { qty: [0, 0, 0, 0], joy: 0, time: 0 };
+  for (let a = 0; a <= DISHES[0].max; a++)
+    for (let b = 0; b <= DISHES[1].max; b++)
+      for (let c = 0; c <= DISHES[2].max; c++)
+        for (let d = 0; d <= DISHES[3].max; d++) {
+          const t = a * DISHES[0].time + b * DISHES[1].time + c * DISHES[2].time + d * DISHES[3].time;
+          if (t > TIME_BUDGET) continue;
+          const j = a * DISHES[0].joy + b * DISHES[1].joy + c * DISHES[2].joy + d * DISHES[3].joy;
+          if (j > best.joy) best = { qty: [a, b, c, d], joy: j, time: t };
+        }
+  return best;
+}
+
+function IntroView() {
+  const [qty, setQty] = useState([0, 0, 0, 0]);
+  const [revealOpt, setRevealOpt] = useState(false);
+
+  const opt = useMemo(() => bruteForceLunch(), []);
+  const display = revealOpt ? opt.qty : qty;
+  const totalTime = display.reduce((s, q, i) => s + q * DISHES[i].time, 0);
+  const totalJoy = display.reduce((s, q, i) => s + q * DISHES[i].joy, 0);
+  const over = totalTime > TIME_BUDGET;
+
+  const setOne = (i, v) => {
+    const next = [...qty];
+    next[i] = v;
+    setQty(next);
+    setRevealOpt(false);
+  };
+
+  // Lunch box SVG (2x2 compartments)
+  const SW = 480, SH = 280, M = 20;
+  const compW = (SW - 2 * M) / 2;
+  const compH = (SH - 2 * M) / 2;
+  const cellPos = [{ r: 0, c: 0 }, { r: 0, c: 1 }, { r: 1, c: 0 }, { r: 1, c: 1 }];
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 00" title="最適化って何？" subtitle="WHAT IS OPTIMIZATION?" accent={C.green} />
+
+      <Story>
+        朝の20分で、お弁当を作る。<br />
+        おかずは4種類。それぞれ作るのにかかる時間と、おいしさ（満足度）が違う。<br />
+        時間内におさめながら、満足度がいちばん高くなる組み合わせを探そう。
+      </Story>
+
+      <Card accent={C.green}>
+        <Blackboard label="LUNCH BOX / お弁当箱" style={{ marginBottom: '1rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            {/* Outer box */}
+            <rect x={M} y={M} width={SW - 2 * M} height={SH - 2 * M}
+              fill="none" stroke={C.chalk} strokeWidth={2.5} />
+            {/* Dividers */}
+            <line x1={M + compW} y1={M} x2={M + compW} y2={SH - M}
+              stroke={C.chalk} strokeWidth={1.5} />
+            <line x1={M} y1={M + compH} x2={SW - M} y2={M + compH}
+              stroke={C.chalk} strokeWidth={1.5} />
+
+            {DISHES.map((dish, di) => {
+              const cell = cellPos[di];
+              const cx = M + cell.c * compW;
+              const cy = M + cell.r * compH;
+              const q = display[di];
+              const cols = Math.min(dish.max, 4);
+              const rows = Math.ceil(dish.max / cols);
+              const ts = Math.min((compW - 32) / cols - 4, (compH - 56) / rows - 4, 30);
+              const totalW = cols * ts + (cols - 1) * 4;
+              const startX = cx + (compW - totalW) / 2;
+              const startY = cy + 32;
+              const tiles = [];
+              for (let i = 0; i < dish.max; i++) {
+                const r = Math.floor(i / cols), col = i % cols;
+                const filled = i < q;
+                tiles.push(
+                  <rect key={i}
+                    x={startX + col * (ts + 4)}
+                    y={startY + r * (ts + 4)}
+                    width={ts} height={ts}
+                    fill={filled ? dish.color : 'none'}
+                    stroke={dish.color}
+                    strokeWidth={1.5}
+                    opacity={filled ? 0.85 : 0.25}
+                    rx={3}
+                  />
+                );
+              }
+              return (
+                <g key={di}>
+                  <text x={cx + 12} y={cy + 18}
+                    style={{ fontFamily: F_DISP, fontSize: 13, fontWeight: 600, fill: dish.color }}>
+                    {dish.name}
+                  </text>
+                  <text x={cx + compW - 12} y={cy + 18} textAnchor="end"
+                    style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>
+                    {dish.time}分 / +{dish.joy}
+                  </text>
+                  {tiles}
+                </g>
+              );
+            })}
+          </svg>
+        </Blackboard>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="md:col-span-2 space-y-3">
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>
+              各おかずの個数を決める
+            </div>
+            {DISHES.map((d, i) => (
+              <Slider
+                key={d.id}
+                label={`${d.name}（${d.time}分 / +${d.joy}点）`}
+                value={display[i]}
+                onChange={(v) => setOne(i, v)}
+                min={0} max={d.max}
+                suffix=" 個"
+                color={d.slider}
+              />
+            ))}
+            <div className="flex gap-2 mt-3">
+              <Btn variant="ghost" size="sm" onClick={() => { setQty([0, 0, 0, 0]); setRevealOpt(false); }}>リセット</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setRevealOpt(!revealOpt)}>
+                {revealOpt ? '元に戻す' : '最適解を見る'}
+              </Btn>
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board, color: C.chalk, padding: '1rem',
+            border: `4px solid ${C.frame}`, borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              {revealOpt ? 'OPTIMAL JOY' : 'YOUR JOY'}
+            </div>
+            <div className="mt-1">
+              <span style={{
+                fontFamily: F_DISP, fontSize: '2.2rem', fontWeight: 600,
+                color: over ? C.chalkPink : (revealOpt ? C.chalkYellow : C.chalk),
+              }}>
+                {over ? '—' : totalJoy}
+              </span>
+              <span style={{ fontFamily: F_MONO, fontSize: 12, color: C.chalkSoft, marginLeft: 6 }}>点</span>
+            </div>
+            <div style={{
+              fontFamily: F_MONO, fontSize: 11,
+              color: over ? C.chalkPink : C.chalkSoft, marginTop: 6,
+            }}>
+              使った時間: {totalTime} / {TIME_BUDGET} 分{' '}
+              {over ? '✗ オーバー' : (totalTime === TIME_BUDGET ? '✓ ぴったり' : '')}
+            </div>
+            <div style={{
+              fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft,
+              marginTop: 12, paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}`, lineHeight: 1.6,
+            }}>
+              最適: <b style={{ color: C.chalkYellow }}>{opt.joy}点</b>
+              <br />
+              {opt.qty.map((q, i) => q > 0 ? `${DISHES[i].name}×${q}` : null).filter(Boolean).join(' / ')}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="0.1">いま、何をやった？</SectionTitle>
+      <NotePaper>
+        <p style={{ fontFamily: F_DISP, fontSize: '1rem', lineHeight: 1.95, color: C.inkSoft }}>
+          スライダーを動かすだけで、3つのことをやっていた。
+        </p>
+        <ul style={{ marginTop: 14, listStyle: 'none', padding: 0 }}>
+          <li style={{ marginBottom: 16 }}>
+            <Tag bg={C.red} color={C.paperLight}>1. 何を決めた？</Tag>
+            <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
+              4種類のおかずを「いくつ作るか」。<br />
+              これが <b style={{ color: C.red }}>決定変数</b>。
+            </div>
+          </li>
+          <li style={{ marginBottom: 16 }}>
+            <Tag bg={C.blue} color={C.paperLight}>2. 何を最大にした？</Tag>
+            <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
+              満足度の合計。<br />
+              これが <b style={{ color: C.blue }}>目的関数</b>。
+            </div>
+          </li>
+          <li>
+            <Tag bg={C.yellow} color={C.paperLight}>3. 何を守った？</Tag>
+            <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
+              「20分以内」と「各おかずの上限個数」。<br />
+              これが <b style={{ color: C.yellow }}>制約条件</b>。
+            </div>
+          </li>
+        </ul>
+      </NotePaper>
+
+      <SectionTitle num="0.2">最適化の仕事は、この3つを式にすること</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          世の中の「うまく決めたい」という仕事は、たいていこの3点セットで書ける。
+          <b>変数 → 目的 → 制約</b> の順に書き出して、コンピュータに渡す。
+          次のレッスンからは、この3つを実際に <b>数式</b> に翻訳していく。
+        </p>
+      </Card>
     </div>
   );
 }
@@ -2241,6 +2465,7 @@ function StatusBox({ label, value, unit, bad, warn }) {
 function Header({ view, setView }) {
   const tabs = [
     { id: 'home', label: 'はじめに' },
+    { id: 'intro', label: '00 入門' },
     { id: 'lp', label: '01 LP' },
     { id: 'knapsack', label: '02 ナップサック' },
     { id: 'transport', label: '03 輸送' },
@@ -2312,6 +2537,7 @@ export default function App() {
       <Header view={view} setView={setView} />
       <main className="max-w-5xl mx-auto px-6 py-10">
         {view === 'home' && <HomeView go={setView} />}
+        {view === 'intro' && <IntroView />}
         {view === 'lp' && <LPView />}
         {view === 'knapsack' && <KnapsackView />}
         {view === 'transport' && <TransportView />}
