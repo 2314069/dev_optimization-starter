@@ -393,6 +393,14 @@ const MODULES = [
     blurb: '4種類の資産にどう配分するか。リスク許容度に応じて、効率的フロンティア上の最適な配分を求める。',
     accent: C.blue,
   },
+  {
+    id: 'toolchain',
+    no: '09',
+    title: 'ソルバーとモデリング言語',
+    sub: '実務への接続 — 道具の使い分け',
+    blurb: '同じ問題を PuLP / JuMP / 生のLP標準形 で書き比べる。モデリング言語とソルバーの役割の違い、最初に選ぶべき組み合わせまで。',
+    accent: C.green,
+  },
 ];
 
 function HomeView({ go }) {
@@ -2638,6 +2646,232 @@ function PortfolioView() {
 }
 
 
+// === TOOLCHAIN MODULE =================================================
+
+const TOOLCHAIN_CODE = {
+  pulp: {
+    name: 'Python + PuLP',
+    file: 'sweets.py',
+    code: `from pulp import LpProblem, LpVariable, LpMaximize, value
+
+m  = LpProblem("sweets", LpMaximize)
+xa = LpVariable("xa", lowBound=0)
+xb = LpVariable("xb", lowBound=0)
+
+m += 120*xa + 100*xb              # 目的関数
+m += 2*xa +   xb <= 12             # 砂糖
+m +=   xa + 2*xb <= 10             # レモン
+
+m.solve()                          # ← デフォルトは CBC ソルバー
+print(value(xa), value(xb), value(m.objective))`,
+  },
+  jump: {
+    name: 'Julia + JuMP',
+    file: 'sweets.jl',
+    code: `using JuMP, HiGHS
+
+m = Model(HiGHS.Optimizer)
+@variable(m, xa >= 0)
+@variable(m, xb >= 0)
+
+@objective(m, Max, 120xa + 100xb)
+@constraint(m, 2xa +  xb <= 12)    # 砂糖
+@constraint(m,  xa + 2xb <= 10)    # レモン
+
+optimize!(m)
+println(value(xa), " ", value(xb), " ", objective_value(m))`,
+  },
+  lp: {
+    name: '生のLP標準形',
+    file: 'sweets.lp',
+    code: `\\ 目的関数
+Maximize
+ obj: 120 xa + 100 xb
+
+\\ 制約
+Subject To
+ c1: 2 xa +   xb <= 12
+ c2:   xa + 2 xb <= 10
+
+\\ 変数の下限（>=0）
+Bounds
+ xa >= 0
+ xb >= 0
+End`,
+  },
+};
+
+function ToolchainView() {
+  const [tab, setTab] = useState('pulp');
+  const code = TOOLCHAIN_CODE[tab];
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 09" title="ソルバーとモデリング言語" subtitle="SOLVER & MODELING LANGUAGE" accent={C.green} />
+
+      <Story>
+        ここまで全部、ブラウザ内の手作りロジック（全列挙・貪欲）で解いてきた。<br />
+        実務ではもっと汎用な道具を使う。それが <b>モデリング言語</b> と <b>ソルバー</b>。<br />
+        役割の違う2つを組み合わせて、問題を解く。
+      </Story>
+
+      <Card accent={C.green}>
+        <div style={{ background: C.paperDark, border: `2px dashed ${C.gridDark}`, padding: '1rem', marginBottom: '1.2rem' }}>
+          <div style={{ fontFamily: F_DISP, fontSize: '1.05rem', color: C.ink, lineHeight: 1.9 }}>
+            <b style={{ color: C.red }}>モデリング言語</b> は「レシピを書く言葉」、
+            <b style={{ color: C.blue }}>ソルバー</b> は「実際に料理する人」。
+            役割が違うので両方が要る。レシピさえ書けば、コックは入れ替えられる。
+          </div>
+        </div>
+
+        <div style={{ overflow: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: F_BODY, fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.paperDark }}>
+                <th style={{ padding: '0.5rem 0.7rem', textAlign: 'left', borderBottom: `1px solid ${C.gridDark}`, fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.1em' }}></th>
+                <th style={{ padding: '0.5rem 0.7rem', textAlign: 'left', borderBottom: `1px solid ${C.gridDark}`, color: C.red, fontFamily: F_DISP, fontSize: 14 }}>モデリング言語</th>
+                <th style={{ padding: '0.5rem 0.7rem', textAlign: 'left', borderBottom: `1px solid ${C.gridDark}`, color: C.blue, fontFamily: F_DISP, fontSize: 14 }}>ソルバー</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ['役割',     '問題を数式に近い形で書く',  '数式を実際に解く'],
+                ['例（無料）', 'PuLP, Pyomo, JuMP, CVXPY', 'HiGHS, CBC, GLPK, SCIP, Ipopt'],
+                ['例（商用）', 'AMPL, GAMS',                'Gurobi, CPLEX, Mosek, Xpress'],
+                ['入力',      'あなたが書く',              'モデリング言語が生成する標準形 (.lp / .mps)'],
+                ['出力',      '（受け流す）',              '最適解・最適値・双対'],
+                ['入れ替え',  '同じ言語で別ソルバーへ切替可','同じソルバーで別言語からも呼べる'],
+              ].map(([k, ml, sv], i) => (
+                <tr key={i} style={{ borderBottom: `1px solid ${C.pageEdge}` }}>
+                  <td style={{ padding: '0.55rem 0.7rem', fontFamily: F_MONO, fontSize: 11, color: C.inkLight, verticalAlign: 'top', whiteSpace: 'nowrap' }}>{k}</td>
+                  <td style={{ padding: '0.55rem 0.7rem', color: C.inkSoft, verticalAlign: 'top' }}>{ml}</td>
+                  <td style={{ padding: '0.55rem 0.7rem', color: C.inkSoft, verticalAlign: 'top' }}>{sv}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <SectionTitle num="9.1">同じ問題を、3つの書き方で</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginBottom: 12 }}>
+          題材は <b>Lesson 01 のお菓子LP</b>（砂糖・レモンの上限のもと利益最大化）。
+          書き方は違っても、<b>変数 → 目的 → 制約</b>の3点セットが必ず出てくる。
+        </p>
+
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {Object.entries(TOOLCHAIN_CODE).map(([id, c]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                background: tab === id ? C.ink : 'transparent',
+                color: tab === id ? C.paper : C.ink,
+                border: `1.5px solid ${C.ink}`,
+                padding: '0.4rem 0.9rem',
+                fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.05em',
+                cursor: 'pointer',
+              }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          background: '#1f1f1f', color: '#e6e6e6',
+          padding: '0.9rem 1.1rem 1rem',
+          fontFamily: F_MONO, fontSize: 12.5, lineHeight: 1.65,
+          overflow: 'auto', borderRadius: 2,
+          boxShadow: `2px 3px 0 ${C.pageEdge}`,
+        }}>
+          <div style={{ color: '#9aa0a6', fontSize: 10, letterSpacing: '0.1em', marginBottom: 8, fontFamily: F_MONO }}>
+            $ {code.file}
+          </div>
+          <pre style={{ margin: 0, whiteSpace: 'pre' }}>{code.code}</pre>
+        </div>
+
+        <p style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, lineHeight: 1.85, marginTop: 14 }}>
+          PuLP の <code style={{ fontFamily: F_MONO, background: C.paperDark, padding: '1px 6px', fontSize: 12 }}>m.solve()</code>
+          は内部で標準形（.lp ファイル）を作り、ソルバー（CBC）に渡している。
+          標準形は人間も読める。<b>道具同士の共通フォーマット</b> としてここで一度顔を出す。
+        </p>
+      </Card>
+
+      <SectionTitle num="9.2">解くまでの流れ</SectionTitle>
+      <Card>
+        <Blackboard label="PIPELINE / SOLVE FLOW">
+          <svg viewBox="0 0 720 200" style={{ width: '100%', height: 'auto', display: 'block' }}>
+            <defs>
+              <marker id="arrToolchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill={C.chalk} />
+              </marker>
+            </defs>
+            {[
+              { x: 10,  label: 'あなたの問題',     sub: '日本語で書いた要件',    color: C.chalkPink },
+              { x: 190, label: 'モデリング言語',   sub: 'PuLP / JuMP / AMPL',   color: C.chalkYellow },
+              { x: 370, label: '標準形 .lp/.mps',  sub: '機械が読める数式',       color: C.chalkBlue },
+              { x: 550, label: 'ソルバー',         sub: 'CBC / HiGHS / Gurobi', color: C.chalkGreen },
+            ].map((b, i) => (
+              <g key={i}>
+                <rect x={b.x} y={50} width={160} height={70} fill="none" stroke={b.color} strokeWidth={2} />
+                <text x={b.x + 80} y={80} textAnchor="middle"
+                  style={{ fontFamily: F_DISP, fontSize: 14, fontWeight: 600, fill: b.color }}>{b.label}</text>
+                <text x={b.x + 80} y={102} textAnchor="middle"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>{b.sub}</text>
+                {i < 3 && (
+                  <line x1={b.x + 160} y1={85} x2={b.x + 188} y2={85}
+                    stroke={C.chalk} strokeWidth={1.5} markerEnd="url(#arrToolchain)" />
+                )}
+              </g>
+            ))}
+            <line x1={50} y1={150} x2={350} y2={150} stroke={C.chalkYellow} strokeWidth={1} strokeDasharray="3 3" />
+            <text x={200} y={166} textAnchor="middle"
+              style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkYellow }}>
+              ↑ ここまで人間が書く
+            </text>
+            <line x1={400} y1={150} x2={700} y2={150} stroke={C.chalkGreen} strokeWidth={1} strokeDasharray="3 3" />
+            <text x={550} y={166} textAnchor="middle"
+              style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkGreen }}>
+              ↑ ここから先は道具が解く
+            </text>
+            <text x={360} y={188} textAnchor="middle"
+              style={{ fontFamily: F_MONO, fontSize: 10.5, fill: C.chalkSoft }}>
+              出力 → 最適解・最適値・双対
+            </text>
+          </svg>
+        </Blackboard>
+      </Card>
+
+      <SectionTitle num="9.3">最初に何を選ぶ？</SectionTitle>
+      <Card>
+        <NotePaper>
+          <div style={{ fontFamily: F_DISP, fontSize: '1rem', color: C.inkSoft, lineHeight: 2 }}>
+            <b style={{ color: C.red }}>● まず動かす</b><br />
+            ・Python が書ける　<span style={{ color: C.inkLight }}>→</span>　<b>PuLP + CBC</b>（無料・PuLP に同梱）<br />
+            ・Julia 派　　　　<span style={{ color: C.inkLight }}>→</span>　<b>JuMP + HiGHS</b><br />
+            ・数式そのまま　　<span style={{ color: C.inkLight }}>→</span>　<b>AMPL</b>（学生・趣味は無料版）<br />
+            <br />
+            <b style={{ color: C.blue }}>● 本番で速さが要る</b><br />
+            ・MIP（整数）が遅い　　<span style={{ color: C.inkLight }}>→</span>　<b>Gurobi / CPLEX</b><br />
+            ・凸 QP / SOCP　　　　<span style={{ color: C.inkLight }}>→</span>　<b>Mosek</b><br />
+            ・大規模 LP　　　　　　<span style={{ color: C.inkLight }}>→</span>　<b>HiGHS</b>（無料でも十分速い）
+          </div>
+        </NotePaper>
+
+        <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginTop: 16 }}>
+          このサイトの全レッスンは「教育のための手作りロジック（全列挙・貪欲）」で解いている。
+          実務では、上の表のような<b>道具を呼び出すだけ</b>で済む。本体のスキルは
+          「変数・目的・制約に翻訳する」ことであって、ソルバー自体を書く必要はない。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === STATUS BOX (shared) ==============================================
+
 function StatusBox({ label, value, unit, bad, warn }) {
   const color = bad ? (warn ? C.yellowDeep : C.red) : C.green;
   const bg = bad ? (warn ? C.yellowLight : C.redLight) : C.greenLight;
@@ -2665,6 +2899,7 @@ function Header({ view, setView }) {
     { id: 'setcover', label: '06 集合被覆' },
     { id: 'facility', label: '07 施設配置' },
     { id: 'portfolio', label: '08 ポートフォリオ' },
+    { id: 'toolchain', label: '09 道具' },
   ];
   return (
     <header
@@ -2738,6 +2973,7 @@ export default function App() {
         {view === 'setcover' && <SetCoverView />}
         {view === 'facility' && <FacilityView />}
         {view === 'portfolio' && <PortfolioView />}
+        {view === 'toolchain' && <ToolchainView />}
       </main>
       <footer
         className="max-w-5xl mx-auto px-6 py-8"
