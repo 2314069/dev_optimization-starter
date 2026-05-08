@@ -338,8 +338,16 @@ const MODULES = [
     accent: C.red,
   },
   {
-    id: 'knapsack',
+    id: 'explosion',
     no: '02',
+    title: '組合せ爆発を体感する',
+    sub: '計算量の地図 — なぜ全探索ではダメか',
+    blurb: '「全部試せばいいじゃん」が通用しないことを、桁感で見る。スライダーで n を動かすと、2^n のパターン数と所要時間がリアルタイムに伸びる。',
+    accent: C.red,
+  },
+  {
+    id: 'knapsack',
+    no: '03',
     title: '旅の荷物を詰める',
     sub: 'ナップサック問題 — 離散最適化の入門',
     blurb: '容量10kgのバックパックに荷物を詰める。重さの上限を守りつつ、満足度の合計が最大になる組み合わせを選ぶ。',
@@ -347,7 +355,7 @@ const MODULES = [
   },
   {
     id: 'transport',
-    no: '03',
+    no: '04',
     title: 'お菓子を配送する',
     sub: '輸送問題 — 割当の直感',
     blurb: '2工場から3店舗へお菓子を運ぶ。経路ごとにコストが異なるなか、合計コストを最小にする配送計画を作る。',
@@ -355,7 +363,7 @@ const MODULES = [
   },
   {
     id: 'shift',
-    no: '04',
+    no: '05',
     title: 'シフトを組む',
     sub: 'スケジューリング — 制約のパズル',
     blurb: '4人のスタッフで5日間のシフトを組む。各日の必要人数、勤務日数の上限、希望休をすべて満たすシフトを作る。',
@@ -363,7 +371,7 @@ const MODULES = [
   },
   {
     id: 'setcover',
-    no: '05',
+    no: '06',
     title: '消防署を配置する',
     sub: '集合被覆問題 — 最少リソースで全カバー',
     blurb: '町の全エリアを1つの消防署で守るには候補のうち何箇所を開設すればよいか。最少の数で全エリアをカバーする組み合わせを選ぶ。',
@@ -371,7 +379,7 @@ const MODULES = [
   },
   {
     id: 'facility',
-    no: '06',
+    no: '07',
     title: '倉庫を建てる',
     sub: '施設配置問題 — 固定費 vs 輸送費',
     blurb: '4つの倉庫候補から建設地を選び、5つの需要点へ配送する。建設費（固定費）と輸送費の合計を最小にする組み合わせを求める。',
@@ -379,7 +387,7 @@ const MODULES = [
   },
   {
     id: 'portfolio',
-    no: '07',
+    no: '08',
     title: '資産を運用する',
     sub: 'ポートフォリオ最適化 — リスクとリターン',
     blurb: '4種類の資産にどう配分するか。リスク許容度に応じて、効率的フロンティア上の最適な配分を求める。',
@@ -1060,6 +1068,189 @@ function LPView() {
   );
 }
 
+// === COMBINATORIAL EXPLOSION MODULE ===================================
+
+const OPS_PER_SEC = 1e9; // 1秒10億回（最近のPCで詰めた場合の上限想定）
+
+function formatPatterns(n) {
+  if (!isFinite(n)) return '∞';
+  if (n < 1e4) return Math.round(n).toLocaleString('ja-JP');
+  if (n < 1e8) return `${(n / 1e4).toFixed(1)} 万`;
+  if (n < 1e12) return `${(n / 1e8).toFixed(2)} 億`;
+  if (n < 1e16) return `${(n / 1e12).toFixed(2)} 兆`;
+  if (n < 1e20) return `${(n / 1e16).toFixed(2)} 京`;
+  const exp = Math.floor(Math.log10(n));
+  const m = n / Math.pow(10, exp);
+  return `${m.toFixed(2)} × 10^${exp}`;
+}
+
+function formatTime(seconds) {
+  if (!isFinite(seconds)) return '∞';
+  if (seconds < 1e-6) return `${(seconds * 1e9).toFixed(0)} ナノ秒`;
+  if (seconds < 1e-3) return `${(seconds * 1e6).toFixed(1)} マイクロ秒`;
+  if (seconds < 1) return `${(seconds * 1e3).toFixed(1)} ミリ秒`;
+  if (seconds < 60) return `${seconds.toFixed(2)} 秒`;
+  if (seconds < 3600) return `${(seconds / 60).toFixed(1)} 分`;
+  if (seconds < 86400) return `${(seconds / 3600).toFixed(1)} 時間`;
+  if (seconds < 86400 * 365) return `${(seconds / 86400).toFixed(0)} 日`;
+  const years = seconds / (86400 * 365);
+  if (years < 1e4) return `約 ${years.toFixed(0)} 年`;
+  if (years < 1e8) return `約 ${(years / 1e4).toFixed(1)} 万年`;
+  if (years < 1e12) return `約 ${(years / 1e8).toFixed(2)} 億年`;
+  return `約 ${(years / 1e8).toExponential(1)} 億年`;
+}
+
+function ExplosionView() {
+  const [n, setN] = useState(20);
+
+  const patterns = Math.pow(2, n);
+  const W = 100;
+  const timeBrute = patterns / OPS_PER_SEC;
+  const timeDP = (n * W) / OPS_PER_SEC;
+
+  const NMAX = 60;
+  const SW = 600, SH = 320, M = 50;
+  const xMin = 1, xMax = NMAX;
+  const yMax = NMAX * Math.log10(2); // ~18
+  const yMin = 0;
+  const sx = (x) => M + ((x - xMin) / (xMax - xMin)) * (SW - 2 * M);
+  const sy = (y) => SH - M - ((y - yMin) / (yMax - yMin)) * (SH - 2 * M);
+  const f_exp = (x) => x * Math.log10(2);
+  const f_dp = (x) => Math.log10(Math.max(1, x * W));
+  const f_lin = (x) => Math.log10(Math.max(1, x));
+
+  const buildPath = (f) => {
+    const pts = [];
+    for (let x = xMin; x <= xMax; x += 0.5) {
+      pts.push(`${sx(x).toFixed(1)},${sy(f(x)).toFixed(1)}`);
+    }
+    return pts.join(' ');
+  };
+
+  const tone = timeBrute > 60 ? { bg: C.redLight, border: C.red, fg: C.red, sub: C.redDeep } :
+               timeBrute > 1  ? { bg: C.yellowLight, border: C.yellow, fg: C.yellowDeep, sub: C.yellowDeep } :
+                                { bg: C.greenLight, border: C.green, fg: C.green, sub: C.greenDeep };
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 02" title="組合せ爆発を体感する" subtitle="COMBINATORIAL EXPLOSION" accent={C.red} />
+
+      <Story>
+        最適化の問題は「全パターンを試して一番いいのを選ぶ」では解けないことが多い。<br />
+        試すべきパターンが <b>爆発的に増える</b> から。<br />
+        どのくらい増えるか、自分の手で確かめよう。
+      </Story>
+
+      <Card accent={C.red}>
+        <Slider
+          label="品物の数 n（YES/NO で選ぶ問題）"
+          value={n}
+          onChange={setN}
+          min={5} max={NMAX} suffix=" 個"
+          color={C.red}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
+          <div style={{ background: C.paperLight, border: `1px solid ${C.rule}`, padding: '0.7rem 0.9rem' }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.1em' }}>
+              パターン数 2^{n}
+            </div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: C.ink, marginTop: 2 }}>
+              {formatPatterns(patterns)}
+              <span style={{ fontSize: '0.75rem', color: C.inkSoft, marginLeft: 4 }}>通り</span>
+            </div>
+          </div>
+          <div style={{ background: tone.bg, border: `1px solid ${tone.border}`, padding: '0.7rem 0.9rem' }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: tone.sub, letterSpacing: '0.1em' }}>
+              全探索の所要時間
+            </div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: tone.fg, marginTop: 2 }}>
+              {formatTime(timeBrute)}
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, marginTop: 2 }}>
+              1秒10億回想定
+            </div>
+          </div>
+          <div style={{ background: C.greenLight, border: `1px solid ${C.green}`, padding: '0.7rem 0.9rem' }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.greenDeep, letterSpacing: '0.1em' }}>
+              動的計画法なら n × W
+            </div>
+            <div style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: C.green, marginTop: 2 }}>
+              {formatTime(timeDP)}
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, marginTop: 2 }}>
+              W=100 想定
+            </div>
+          </div>
+        </div>
+
+        <Blackboard label="GROWTH / 計算量の伸び（縦軸 log）" style={{ marginTop: '1.2rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            <line x1={M} y1={SH - M} x2={SW - M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
+            <line x1={M} y1={M} x2={M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
+
+            {[5, 10, 20, 30, 40, 50, 60].map((x) => (
+              <g key={`x${x}`}>
+                <line x1={sx(x)} y1={SH - M} x2={sx(x)} y2={SH - M + 5} stroke={C.chalkSoft} />
+                <text x={sx(x)} y={SH - M + 18} textAnchor="middle"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>
+                  {x}
+                </text>
+              </g>
+            ))}
+            <text x={SW / 2} y={SH - 10} textAnchor="middle"
+              style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkSoft }}>n（問題サイズ）</text>
+
+            {[0, 3, 6, 9, 12, 15, 18].map((y) => (
+              <g key={`y${y}`}>
+                <line x1={M - 5} y1={sy(y)} x2={M} y2={sy(y)} stroke={C.chalkSoft} />
+                <text x={M - 8} y={sy(y) + 3} textAnchor="end"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>
+                  10^{y}
+                </text>
+              </g>
+            ))}
+
+            <polyline points={buildPath(f_exp)} fill="none" stroke={C.chalkPink} strokeWidth={2.4} />
+            <polyline points={buildPath(f_dp)}  fill="none" stroke={C.chalkBlue} strokeWidth={2.4} />
+            <polyline points={buildPath(f_lin)} fill="none" stroke={C.chalkGreen} strokeWidth={2.4} />
+
+            <line x1={sx(n)} y1={M} x2={sx(n)} y2={SH - M}
+              stroke={C.chalkYellow} strokeWidth={1.5} strokeDasharray="4 3" />
+            <circle cx={sx(n)} cy={sy(f_exp(n))} r={4} fill={C.chalkPink} />
+            <circle cx={sx(n)} cy={sy(f_dp(n))} r={4} fill={C.chalkBlue} />
+            <circle cx={sx(n)} cy={sy(f_lin(n))} r={4} fill={C.chalkGreen} />
+            <text x={sx(n)} y={M - 6} textAnchor="middle"
+              style={{ fontFamily: F_MONO, fontSize: 11, fill: C.chalkYellow }}>
+              n={n}
+            </text>
+
+            <g transform={`translate(${SW - 210}, ${M + 6})`}>
+              <rect x={0} y={0} width={200} height={66} fill={C.boardLight} stroke={C.chalkFaint} opacity={0.92} />
+              <line x1={10} y1={16} x2={30} y2={16} stroke={C.chalkPink} strokeWidth={2.4} />
+              <text x={36} y={19} style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalk }}>全探索 2^n（指数）</text>
+              <line x1={10} y1={34} x2={30} y2={34} stroke={C.chalkBlue} strokeWidth={2.4} />
+              <text x={36} y={37} style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalk }}>動的計画 n × W</text>
+              <line x1={10} y1={52} x2={30} y2={52} stroke={C.chalkGreen} strokeWidth={2.4} />
+              <text x={36} y={55} style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalk }}>線形 n</text>
+            </g>
+          </svg>
+        </Blackboard>
+      </Card>
+
+      <SectionTitle num="2.1">なぜ「賢い解き方」が要るのか</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          n=20 までは <b>ミリ秒</b> で済むが、n=30 を越えると <b>数秒〜分</b>、
+          n=50 では <b>1台のPCが何日も</b> 動き続けることになる。n=60 で <b>数十年</b>。
+          だから最適化アルゴリズムは「賢く枝刈りする」「構造を使う」「近似で妥協する」のいずれかを取る。
+          次のレッスン以降に出てくる <b>動的計画法・LP緩和・貪欲法</b> は、すべてこの問題への回答。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
 // === KNAPSACK MODULE ==================================================
 
 const KNAP_ITEMS = [
@@ -1120,7 +1311,7 @@ function KnapsackView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 02" title="旅の荷物を詰める" subtitle="0/1 KNAPSACK PROBLEM" accent={C.blue} />
+      <ModuleHeader kicker="LESSON 03" title="旅の荷物を詰める" subtitle="0/1 KNAPSACK PROBLEM" accent={C.blue} />
 
       <Story>
         キャンプに持っていく荷物を選ぶ。<br />
@@ -1322,7 +1513,7 @@ function TransportView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 03" title="お菓子を配送する" subtitle="TRANSPORTATION PROBLEM" accent={C.yellow} />
+      <ModuleHeader kicker="LESSON 04" title="お菓子を配送する" subtitle="TRANSPORTATION PROBLEM" accent={C.yellow} />
 
       <Story>
         2つの工場（W1, W2）から3つの店舗（S1, S2, S3）へお菓子を運ぶ。<br />
@@ -1568,7 +1759,7 @@ function ShiftView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 04" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
+      <ModuleHeader kicker="LESSON 05" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
 
       <Story>
         スタッフ <b>4 人</b>で月〜金のシフトを組む。<br />
@@ -1792,7 +1983,7 @@ function SetCoverView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 05" title="消防署を配置する" subtitle="SET COVER PROBLEM" accent={C.red} />
+      <ModuleHeader kicker="LESSON 06" title="消防署を配置する" subtitle="SET COVER PROBLEM" accent={C.red} />
 
       <Story>
         町の全エリア（4×3 = 12 区画）を消防署でカバーする。<br />
@@ -2029,7 +2220,7 @@ function FacilityView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 06" title="倉庫を建てる" subtitle="FACILITY LOCATION" accent={C.yellow} />
+      <ModuleHeader kicker="LESSON 07" title="倉庫を建てる" subtitle="FACILITY LOCATION" accent={C.yellow} />
 
       <Story>
         4つの倉庫候補から建設地を選び、5つの需要点へ配送する。<br />
@@ -2263,7 +2454,7 @@ function PortfolioView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 07" title="資産を運用する" subtitle="PORTFOLIO OPTIMIZATION" accent={C.blue} />
+      <ModuleHeader kicker="LESSON 08" title="資産を運用する" subtitle="PORTFOLIO OPTIMIZATION" accent={C.blue} />
 
       <Story>
         4種類の資産にどう資金を配分するか。<br />
@@ -2467,12 +2658,13 @@ function Header({ view, setView }) {
     { id: 'home', label: 'はじめに' },
     { id: 'intro', label: '00 入門' },
     { id: 'lp', label: '01 LP' },
-    { id: 'knapsack', label: '02 ナップサック' },
-    { id: 'transport', label: '03 輸送' },
-    { id: 'shift', label: '04 シフト' },
-    { id: 'setcover', label: '05 集合被覆' },
-    { id: 'facility', label: '06 施設配置' },
-    { id: 'portfolio', label: '07 ポートフォリオ' },
+    { id: 'explosion', label: '02 爆発' },
+    { id: 'knapsack', label: '03 ナップサック' },
+    { id: 'transport', label: '04 輸送' },
+    { id: 'shift', label: '05 シフト' },
+    { id: 'setcover', label: '06 集合被覆' },
+    { id: 'facility', label: '07 施設配置' },
+    { id: 'portfolio', label: '08 ポートフォリオ' },
   ];
   return (
     <header
@@ -2539,6 +2731,7 @@ export default function App() {
         {view === 'home' && <HomeView go={setView} />}
         {view === 'intro' && <IntroView />}
         {view === 'lp' && <LPView />}
+        {view === 'explosion' && <ExplosionView />}
         {view === 'knapsack' && <KnapsackView />}
         {view === 'transport' && <TransportView />}
         {view === 'shift' && <ShiftView />}
