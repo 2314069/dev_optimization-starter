@@ -362,8 +362,16 @@ const MODULES = [
     accent: C.yellow,
   },
   {
-    id: 'shift',
+    id: 'landscape',
     no: '05',
+    title: '山と谷',
+    sub: '局所最適 vs 大域最適 — 貪欲の罠',
+    blurb: '凸凹のある関数の上をボールが転がる。今いる場所の傾きしか見ないと、すぐそばの谷で止まり、もっと深い谷に気づけない。多点スタートで脱出する。',
+    accent: C.blue,
+  },
+  {
+    id: 'shift',
+    no: '06',
     title: 'シフトを組む',
     sub: 'スケジューリング — 制約のパズル',
     blurb: '4人のスタッフで5日間のシフトを組む。各日の必要人数、勤務日数の上限、希望休をすべて満たすシフトを作る。',
@@ -371,7 +379,7 @@ const MODULES = [
   },
   {
     id: 'setcover',
-    no: '06',
+    no: '07',
     title: '消防署を配置する',
     sub: '集合被覆問題 — 最少リソースで全カバー',
     blurb: '町の全エリアを1つの消防署で守るには候補のうち何箇所を開設すればよいか。最少の数で全エリアをカバーする組み合わせを選ぶ。',
@@ -379,7 +387,7 @@ const MODULES = [
   },
   {
     id: 'facility',
-    no: '07',
+    no: '08',
     title: '倉庫を建てる',
     sub: '施設配置問題 — 固定費 vs 輸送費',
     blurb: '4つの倉庫候補から建設地を選び、5つの需要点へ配送する。建設費（固定費）と輸送費の合計を最小にする組み合わせを求める。',
@@ -387,7 +395,7 @@ const MODULES = [
   },
   {
     id: 'portfolio',
-    no: '08',
+    no: '09',
     title: '資産を運用する',
     sub: 'ポートフォリオ最適化 — リスクとリターン',
     blurb: '4種類の資産にどう配分するか。リスク許容度に応じて、効率的フロンティア上の最適な配分を求める。',
@@ -395,7 +403,7 @@ const MODULES = [
   },
   {
     id: 'toolchain',
-    no: '09',
+    no: '10',
     title: 'ソルバーとモデリング言語',
     sub: '実務への接続 — 道具の使い分け',
     blurb: '同じ問題を PuLP / JuMP / 生のLP標準形 で書き比べる。モデリング言語とソルバーの役割の違い、最初に選ぶべき組み合わせまで。',
@@ -1426,7 +1434,7 @@ function KnapsackView() {
         </div>
       </Card>
 
-      <SectionTitle num="2.1">貪欲法と最適解の比較</SectionTitle>
+      <SectionTitle num="3.1">貪欲法と最適解の比較</SectionTitle>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card style={{ background: C.yellowLight, borderColor: C.yellow }}>
           <Tag bg={C.yellow} color={C.paperLight}>GREEDY / 貪欲法</Tag>
@@ -1448,7 +1456,7 @@ function KnapsackView() {
         </Card>
       </div>
 
-      <SectionTitle num="2.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <SectionTitle num="3.2">これを「数理最適化の言葉」で書くと</SectionTitle>
       <Card>
         <Equation label="0/1 INTEGER PROGRAMMING">
           <div style={{ color: C.chalkGreen, fontWeight: 500 }}>maximize</div>
@@ -1680,7 +1688,7 @@ function TransportView() {
         </div>
       </Card>
 
-      <SectionTitle num="3.1">最適解の構造</SectionTitle>
+      <SectionTitle num="4.1">最適解の構造</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
           コスト行列を見ると、最安は W2→S3（¥2）、次に W1→S1（¥3）。一方で W1→S3（¥7）と W2→S1（¥6）は割高。
@@ -1698,6 +1706,229 @@ function TransportView() {
         </div>
         <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85, marginTop: 12 }}>
           これも線形計画（LP）の一種で <b>輸送問題</b> と呼ばれる。物流・配車・割当・電力配分など、構造を変えながら多くの場面に現れる。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+// === LANDSCAPE MODULE =================================================
+
+function landscape(x) {
+  return Math.sin(x) + 0.6 * Math.sin(2.3 * x) + 0.04 * (x - 5) ** 2;
+}
+
+function landscapeGrad(x) {
+  const h = 1e-3;
+  return (landscape(x + h) - landscape(x - h)) / (2 * h);
+}
+
+function runGreedyDescent(x0, xMin, xMax) {
+  const path = [x0];
+  let x = x0;
+  const eta = 0.06;
+  for (let i = 0; i < 200; i++) {
+    const g = landscapeGrad(x);
+    if (Math.abs(g) < 1e-3) break;
+    let next = x - eta * g;
+    if (next < xMin) next = xMin;
+    if (next > xMax) next = xMax;
+    if (Math.abs(next - x) < 1e-5) break;
+    path.push(next);
+    x = next;
+  }
+  return path;
+}
+
+function LandscapeView() {
+  const xMin = 0, xMax = 10;
+  const [startX, setStartX] = useState(2.0);
+  const [showJump, setShowJump] = useState(false);
+
+  const greedyPath = useMemo(() => runGreedyDescent(startX, xMin, xMax), [startX]);
+
+  const jumpData = useMemo(() => {
+    const N = 8;
+    const paths = [];
+    for (let i = 0; i < N; i++) {
+      const x0 = xMin + ((xMax - xMin) * (i + 0.5)) / N;
+      paths.push(runGreedyDescent(x0, xMin, xMax));
+    }
+    let best = { x: 0, y: Infinity };
+    for (const p of paths) {
+      const x = p[p.length - 1];
+      const y = landscape(x);
+      if (y < best.y) best = { x, y };
+    }
+    return { paths, best };
+  }, []);
+
+  const globalMin = useMemo(() => {
+    let best = { x: 0, y: Infinity };
+    for (let x = xMin; x <= xMax; x += 0.005) {
+      const y = landscape(x);
+      if (y < best.y) best = { x, y };
+    }
+    return best;
+  }, []);
+
+  const greedyEnd = greedyPath[greedyPath.length - 1];
+  const greedyVal = landscape(greedyEnd);
+  const isStuck = Math.abs(greedyEnd - globalMin.x) > 0.4;
+
+  const SW = 600, SH = 320, M = 50;
+  const yMin = -2.4, yMax = 3.0;
+  const sx = (x) => M + ((x - xMin) / (xMax - xMin)) * (SW - 2 * M);
+  const sy = (y) => M + ((yMax - y) / (yMax - yMin)) * (SH - 2 * M);
+
+  const landscapePath = useMemo(() => {
+    const pts = [];
+    for (let x = xMin; x <= xMax; x += 0.04) {
+      pts.push(`${sx(x).toFixed(1)},${sy(landscape(x)).toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }, []);
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 05" title="山と谷" subtitle="LOCAL VS GLOBAL OPTIMUM" accent={C.blue} />
+
+      <Story>
+        最適化アルゴリズムの多くは「今いる場所から、よい方向に少しだけ動く」を繰り返す。<br />
+        でもそれだけだと、<b>すぐそばの谷</b> でボールが止まり、もっと深い谷に気づかないことがある。<br />
+        この罠を <b>局所最適</b> と呼ぶ。
+      </Story>
+
+      <Card accent={C.blue}>
+        <Blackboard label="LANDSCAPE / 1次元の凸凹関数" style={{ marginBottom: '1rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            <line x1={M} y1={sy(0)} x2={SW - M} y2={sy(0)}
+              stroke={C.chalkSoft} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
+            {[0, 2, 4, 6, 8, 10].map((x) => (
+              <g key={`x${x}`}>
+                <line x1={sx(x)} y1={SH - M} x2={sx(x)} y2={SH - M + 5} stroke={C.chalkSoft} />
+                <text x={sx(x)} y={SH - M + 18} textAnchor="middle"
+                  style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>{x}</text>
+              </g>
+            ))}
+            <line x1={M} y1={M} x2={M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
+            <line x1={M} y1={SH - M} x2={SW - M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
+
+            <polyline points={landscapePath} fill="none" stroke={C.chalk} strokeWidth={2} />
+
+            {showJump && jumpData.paths.map((p, i) => (
+              <g key={`jp${i}`} opacity={0.6}>
+                {p.map((x, j) => (
+                  <circle key={j} cx={sx(x)} cy={sy(landscape(x))} r={1.6}
+                    fill={C.chalkBlue} opacity={0.45} />
+                ))}
+                <circle cx={sx(p[p.length - 1])} cy={sy(landscape(p[p.length - 1]))}
+                  r={4} fill={C.chalkBlue} stroke={C.board} strokeWidth={1} />
+              </g>
+            ))}
+
+            {greedyPath.map((x, i) => {
+              const isStart = i === 0;
+              const isEnd = i === greedyPath.length - 1;
+              const r = isStart ? 5 : isEnd ? 7 : 2;
+              const fill = isEnd ? (isStuck ? C.chalkPink : C.chalkGreen) : C.chalkPink;
+              const op = isStart || isEnd ? 1 : 0.35 + 0.5 * (i / greedyPath.length);
+              return (
+                <circle key={`gp${i}`} cx={sx(x)} cy={sy(landscape(x))} r={r}
+                  fill={fill} opacity={op} stroke={isEnd ? C.board : 'none'} strokeWidth={1.5} />
+              );
+            })}
+
+            <g>
+              <line x1={sx(globalMin.x) - 8} y1={sy(globalMin.y) - 8}
+                x2={sx(globalMin.x) + 8} y2={sy(globalMin.y) + 8}
+                stroke={C.chalkYellow} strokeWidth={2.5} />
+              <line x1={sx(globalMin.x) - 8} y1={sy(globalMin.y) + 8}
+                x2={sx(globalMin.x) + 8} y2={sy(globalMin.y) - 8}
+                stroke={C.chalkYellow} strokeWidth={2.5} />
+              <text x={sx(globalMin.x)} y={sy(globalMin.y) - 14} textAnchor="middle"
+                style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkYellow }}>真の最小</text>
+            </g>
+          </svg>
+        </Blackboard>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="md:col-span-2 space-y-3">
+            <Slider
+              label="ボールの初期位置 x"
+              value={startX}
+              onChange={(v) => setStartX(v)}
+              min={xMin} max={xMax} step={0.1}
+              color={C.red}
+            />
+            <div className="flex gap-2 flex-wrap mt-3">
+              <Btn variant="ghost" size="sm" onClick={() => setStartX(2.0)}>リセット</Btn>
+              <Btn variant="primary" size="sm" onClick={() => setShowJump(!showJump)}>
+                {showJump ? 'ジャンプ探索を隠す' : 'ジャンプ探索を試す'}
+              </Btn>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, marginTop: 8, lineHeight: 1.7 }}>
+              赤丸 = 貪欲法（傾きを下る）／ 黄✕ = 真の最小 ／ 青丸 = ジャンプ探索（8地点から）
+            </div>
+          </div>
+
+          <div style={{
+            background: C.board, color: C.chalk, padding: '1rem',
+            border: `4px solid ${C.frame}`, borderRadius: 3,
+            boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
+              GREEDY RESULT
+            </div>
+            <div className="mt-1">
+              <span style={{
+                fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600,
+                color: isStuck ? C.chalkPink : C.chalkGreen,
+              }}>
+                f = {greedyVal.toFixed(3)}
+              </span>
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, marginTop: 4 }}>
+              x = {greedyEnd.toFixed(2)}（{greedyPath.length} ステップ）
+            </div>
+            <div style={{
+              fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft, marginTop: 12,
+              paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}`, lineHeight: 1.7,
+            }}>
+              真の最小: <b style={{ color: C.chalkYellow }}>f = {globalMin.y.toFixed(3)}</b><br />
+              x = {globalMin.x.toFixed(2)}
+              <div style={{ color: isStuck ? C.chalkPink : C.chalkGreen, marginTop: 6 }}>
+                {isStuck ? '✗ 局所最適にハマっている' : '✓ 大域最小に到達'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <SectionTitle num="5.1">なぜハマるのか</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          ボールは「足元の傾き」しか見ない。だから周囲の地形（もっと深い谷）に気づけない。
+          これは <b>勾配降下法</b> や <b>貪欲法</b> の根本的な限界。
+        </p>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85, marginTop: 8 }}>
+          回避策はおおむね3つ：
+        </p>
+        <ul style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, marginLeft: '1.4rem', lineHeight: 1.95 }}>
+          <li><b>多点スタート</b>：複数の初期位置から出発し、最良を採用（上の「ジャンプ探索」）</li>
+          <li><b>ランダム性</b>：たまにわざと悪い方向にも動く（焼きなまし法・遺伝的アルゴリズム）</li>
+          <li><b>構造を使う</b>：問題が凸（=谷が1つ）なら局所＝大域。LP は実は凸なので貪欲でも安心</li>
+        </ul>
+      </Card>
+
+      <SectionTitle num="5.2">「凸」だと何が嬉しいか</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          <b>凸関数</b> は山が1つしかない地形のこと。
+          凸最適化では <b>局所最適 = 大域最適</b> が保証されるので、勾配を下るだけで真の最適に届く。
+          LP・QP（Lesson 01・09）は凸。
+          一方、シフトや施設配置（Lesson 06・08）は整数変数を含むため非凸で、
+          LP緩和や枝限定法など <b>別の道具</b> が要る。次レッスン以降にハマるのも、その難しさの現れ。
         </p>
       </Card>
     </div>
@@ -1767,7 +1998,7 @@ function ShiftView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 05" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
+      <ModuleHeader kicker="LESSON 06" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
 
       <Story>
         スタッフ <b>4 人</b>で月〜金のシフトを組む。<br />
@@ -1874,7 +2105,7 @@ function ShiftView() {
         </div>
       </Card>
 
-      <SectionTitle num="4.1">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <SectionTitle num="6.1">これを「数理最適化の言葉」で書くと</SectionTitle>
       <Card>
         <Equation label="SCHEDULING / 整数計画">
           <div>
@@ -1894,7 +2125,7 @@ function ShiftView() {
         </p>
       </Card>
 
-      <SectionTitle num="4.2">ポイント</SectionTitle>
+      <SectionTitle num="6.2">ポイント</SectionTitle>
       <Card style={{ background: C.greenLight, borderColor: C.green }}>
         <p style={{ fontFamily: F_BODY, fontSize: 14.5, color: C.ink, lineHeight: 1.85 }}>
           4人 × 5日 でも組み合わせは 2<sup>20</sup> ≈ 100万通り。
@@ -1991,7 +2222,7 @@ function SetCoverView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 06" title="消防署を配置する" subtitle="SET COVER PROBLEM" accent={C.red} />
+      <ModuleHeader kicker="LESSON 07" title="消防署を配置する" subtitle="SET COVER PROBLEM" accent={C.red} />
 
       <Story>
         町の全エリア（4×3 = 12 区画）を消防署でカバーする。<br />
@@ -2115,7 +2346,7 @@ function SetCoverView() {
         </div>
       </Card>
 
-      <SectionTitle num="5.1">貪欲法と最適解の比較</SectionTitle>
+      <SectionTitle num="7.1">貪欲法と最適解の比較</SectionTitle>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card style={{ background: C.yellowLight, borderColor: C.yellow }}>
           <Tag bg={C.yellow} color={C.paperLight}>GREEDY / 貪欲法</Tag>
@@ -2137,7 +2368,7 @@ function SetCoverView() {
         </Card>
       </div>
 
-      <SectionTitle num="5.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <SectionTitle num="7.2">これを「数理最適化の言葉」で書くと</SectionTitle>
       <Card>
         <Equation label="SET COVER / 整数計画">
           <div>
@@ -2228,7 +2459,7 @@ function FacilityView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 07" title="倉庫を建てる" subtitle="FACILITY LOCATION" accent={C.yellow} />
+      <ModuleHeader kicker="LESSON 08" title="倉庫を建てる" subtitle="FACILITY LOCATION" accent={C.yellow} />
 
       <Story>
         4つの倉庫候補から建設地を選び、5つの需要点へ配送する。<br />
@@ -2360,7 +2591,7 @@ function FacilityView() {
         </div>
       </Card>
 
-      <SectionTitle num="6.1">トレードオフの構造</SectionTitle>
+      <SectionTitle num="8.1">トレードオフの構造</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
           倉庫を多く建てれば<b>輸送費</b>は下がるが<b>固定費</b>が増える。少なく建てれば固定費は減るが輸送費が増える。
@@ -2369,7 +2600,7 @@ function FacilityView() {
         </p>
       </Card>
 
-      <SectionTitle num="6.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <SectionTitle num="8.2">これを「数理最適化の言葉」で書くと</SectionTitle>
       <Card>
         <Equation label="FACILITY LOCATION / MIP">
           <div>
@@ -2462,7 +2693,7 @@ function PortfolioView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 08" title="資産を運用する" subtitle="PORTFOLIO OPTIMIZATION" accent={C.blue} />
+      <ModuleHeader kicker="LESSON 09" title="資産を運用する" subtitle="PORTFOLIO OPTIMIZATION" accent={C.blue} />
 
       <Story>
         4種類の資産にどう資金を配分するか。<br />
@@ -2614,7 +2845,7 @@ function PortfolioView() {
         </div>
       </Card>
 
-      <SectionTitle num="7.1">分散効果と効率的フロンティア</SectionTitle>
+      <SectionTitle num="9.1">分散効果と効率的フロンティア</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
           単一資産だけ持つと（図中の色付き点）リスクは資産ごとの σ になるが、
@@ -2623,7 +2854,7 @@ function PortfolioView() {
         </p>
       </Card>
 
-      <SectionTitle num="7.2">これを「数理最適化の言葉」で書くと</SectionTitle>
+      <SectionTitle num="9.2">これを「数理最適化の言葉」で書くと</SectionTitle>
       <Card>
         <Equation label="MEAN-VARIANCE / 二次計画 (QP)">
           <div>
@@ -2707,7 +2938,7 @@ function ToolchainView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 09" title="ソルバーとモデリング言語" subtitle="SOLVER & MODELING LANGUAGE" accent={C.green} />
+      <ModuleHeader kicker="LESSON 10" title="ソルバーとモデリング言語" subtitle="SOLVER & MODELING LANGUAGE" accent={C.green} />
 
       <Story>
         ここまで全部、ブラウザ内の手作りロジック（全列挙・貪欲）で解いてきた。<br />
@@ -2753,7 +2984,7 @@ function ToolchainView() {
         </div>
       </Card>
 
-      <SectionTitle num="9.1">同じ問題を、3つの書き方で</SectionTitle>
+      <SectionTitle num="10.1">同じ問題を、3つの書き方で</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginBottom: 12 }}>
           題材は <b>Lesson 01 のお菓子LP</b>（砂糖・レモンの上限のもと利益最大化）。
@@ -2799,7 +3030,7 @@ function ToolchainView() {
         </p>
       </Card>
 
-      <SectionTitle num="9.2">解くまでの流れ</SectionTitle>
+      <SectionTitle num="10.2">解くまでの流れ</SectionTitle>
       <Card>
         <Blackboard label="PIPELINE / SOLVE FLOW">
           <svg viewBox="0 0 720 200" style={{ width: '100%', height: 'auto', display: 'block' }}>
@@ -2844,7 +3075,7 @@ function ToolchainView() {
         </Blackboard>
       </Card>
 
-      <SectionTitle num="9.3">最初に何を選ぶ？</SectionTitle>
+      <SectionTitle num="10.3">最初に何を選ぶ？</SectionTitle>
       <Card>
         <NotePaper>
           <div style={{ fontFamily: F_DISP, fontSize: '1rem', color: C.inkSoft, lineHeight: 2 }}>
@@ -2895,11 +3126,12 @@ function Header({ view, setView }) {
     { id: 'explosion', label: '02 爆発' },
     { id: 'knapsack', label: '03 ナップサック' },
     { id: 'transport', label: '04 輸送' },
-    { id: 'shift', label: '05 シフト' },
-    { id: 'setcover', label: '06 集合被覆' },
-    { id: 'facility', label: '07 施設配置' },
-    { id: 'portfolio', label: '08 ポートフォリオ' },
-    { id: 'toolchain', label: '09 道具' },
+    { id: 'landscape', label: '05 山と谷' },
+    { id: 'shift', label: '06 シフト' },
+    { id: 'setcover', label: '07 集合被覆' },
+    { id: 'facility', label: '08 施設配置' },
+    { id: 'portfolio', label: '09 ポートフォリオ' },
+    { id: 'toolchain', label: '10 道具' },
   ];
   return (
     <header
@@ -2969,6 +3201,7 @@ export default function App() {
         {view === 'explosion' && <ExplosionView />}
         {view === 'knapsack' && <KnapsackView />}
         {view === 'transport' && <TransportView />}
+        {view === 'landscape' && <LandscapeView />}
         {view === 'shift' && <ShiftView />}
         {view === 'setcover' && <SetCoverView />}
         {view === 'facility' && <FacilityView />}
