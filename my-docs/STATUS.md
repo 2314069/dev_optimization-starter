@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（スコープ外 2: アクセシビリティ強化）
+> 最終更新: 2026-05-09（スコープ外 3: i18n インフラ + UI 英訳）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -43,7 +43,8 @@
 | `93cb4df` | UI/UX 改善 3: 多解性注釈 / 爆発初期 n=30 / ジャンプ順次表示 / 構造化解説 / コピーボタン |
 | `973196d` | UI/UX 改善 4: SVG aria-label / 倉庫ボタン 44pt / inkLight コントラスト改善 |
 | `16e8b45` | スコープ外 1: 輸送LP の本物ソルバー化 + Vite/React/Tailwind ビルド設定 |
-| _次commit_ | スコープ外 2: skip link / focus-visible / view 切替時の focus + scroll / aria-current |
+| `222cf06` | スコープ外 2: skip link / focus-visible / view 切替時の focus + scroll / aria-current |
+| _次commit_ | スコープ外 3: i18n インフラ（LangContext/I18N/useT）+ ヘッダー・ホーム・フッターを EN 化 |
 
 ## 4. 残 TODO
 
@@ -76,13 +77,15 @@
 - [x] #14 タップ領域 44pt 以上（FacilityView 倉庫ボタンを `minHeight: 44` に。SetCover 56×56・Shift 56×56・Knapsack 約60px は OK）
 - [x] #15 メタテキストのコントラスト改善（`C.inkLight` を #7a7062 → #5d5446、`C.inkLighter` も濃く）
 
-> 仕様書スコープ内 TODO・UI/UX レビュー TODO すべて完了。残るは §5 のスコープ外項目のみ。
+> 仕様書スコープ内 TODO・UI/UX レビュー TODO・スコープ外（輸送 / ビルド / a11y / i18n インフラ）すべて完了。
+> 残るのは「レッスン本文の英訳」のみ — 機械的な `t()` 置換タスクとして次フェーズへ。
 
 ## 5. スコープ外 → 取り組み中
 
 - [x] Lesson 04 輸送のハードコード解消 → 整数格子点総当たりで動的計算
 - [x] ビルド設定（Vite + React + Tailwind 整備、`npm run dev` / `npm run build` で起動）
-- [ ] 多言語化（i18n インフラ + UI 文字列の英語化）
+- [x] 多言語化 — **インフラ + UI シェル翻訳まで**（`LangContext` + `I18N{ja,en}` + `useT()` + ヘッダー言語切替）。翻訳済み: スキップリンク・フッター・ヘッダータブ全 13・ホームのヒーロー / CTA / STEP 1〜4 ラベル / ESSENCE / レッスン前後ナビ
+  - **未翻訳（次フェーズ）**: 各レッスンの Story 散文・SectionTitle 本文・Card 内のプロース解説・SVG 凡例日本語ラベル。`t()` で順次置換可能
 - [x] アクセシビリティ強化（skip link / `:focus-visible` / view 切替時の focus 移動 + smooth scroll / `aria-current="page"` / `<main aria-live="polite">`）
 
 ## 6. 既知の課題 / 留意点

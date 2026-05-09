@@ -1,4 +1,86 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useContext, createContext } from 'react';
+
+// === i18n =============================================================
+// UI シェル（ヘッダー・ホーム・共通ボタン・フッター）のみ翻訳。
+// レッスン本文（Story / SectionTitle / Card 内のプロース）は日本語のまま。
+// 拡張時は I18N に同じ key の翻訳を追加するだけ。
+const I18N = {
+  ja: {
+    'app.skip':           '本文へスキップ',
+    'app.footer':         'OPTIMIZATION LAB — 触って学ぶ数理最適化 / built with React',
+    'lang.switch':        'EN',
+    'nav.home':           'はじめに',
+    'nav.intro':          '入門',
+    'nav.lp':             'LP',
+    'nav.explosion':      '爆発',
+    'nav.knapsack':       'ナップサック',
+    'nav.transport':      '輸送',
+    'nav.landscape':      '山と谷',
+    'nav.shift':          'シフト',
+    'nav.setcover':       '集合被覆',
+    'nav.facility':       '施設配置',
+    'nav.portfolio':      'ポートフォリオ',
+    'nav.modeling':       'モデリング',
+    'nav.toolchain':      '道具',
+    'home.kicker':        'OPTIMIZATION LAB · 2026',
+    'home.title.line1':   '数理最適化',
+    'home.title.line2':   'スターター',
+    'home.lead':          '制約のもとで目的を最大化（最小化）する考え方を、身近な題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。',
+    'home.cta':           '初めての人はここから → Lesson 00',
+    'home.essence.label': 'ESSENCE / 数理最適化を構成する3つの要素',
+    'home.step1.label':   '言葉に慣れる',
+    'home.step1.tag':     '— 数式の前に、3要素を体に入れる',
+    'home.step2.label':   '解いてみる',
+    'home.step2.tag':     '— 古典問題で式と最適解を行き来する',
+    'home.step3.label':   '直感をつかむ',
+    'home.step3.tag':     '— 貪欲のクセと凸性を見る',
+    'home.step4.label':   '実務に繋ぐ',
+    'home.step4.tag':     '— 翻訳と道具の橋渡し',
+    'lessonNav.prev':     '← PREV',
+    'lessonNav.next':     'NEXT →',
+  },
+  en: {
+    'app.skip':           'Skip to main content',
+    'app.footer':         'OPTIMIZATION LAB — playful tour of mathematical optimization / built with React',
+    'lang.switch':        '日本語',
+    'nav.home':           'Home',
+    'nav.intro':          'Intro',
+    'nav.lp':             'LP',
+    'nav.explosion':      'Explosion',
+    'nav.knapsack':       'Knapsack',
+    'nav.transport':      'Transport',
+    'nav.landscape':      'Landscape',
+    'nav.shift':          'Shift',
+    'nav.setcover':       'Set Cover',
+    'nav.facility':       'Facility',
+    'nav.portfolio':      'Portfolio',
+    'nav.modeling':       'Modeling',
+    'nav.toolchain':      'Toolchain',
+    'home.kicker':        'OPTIMIZATION LAB · 2026',
+    'home.title.line1':   'Mathematical',
+    'home.title.line2':   'Optimization Starter',
+    'home.lead':          'A hands-on tour of how to maximize (or minimize) an objective under constraints. Drag sliders, flip toggles, learn by doing.',
+    'home.cta':           'Start here → Lesson 00',
+    'home.essence.label': 'ESSENCE / The three building blocks',
+    'home.step1.label':   'Get the vocabulary',
+    'home.step1.tag':     '— absorb the 3 pieces before any math',
+    'home.step2.label':   'Solve concrete problems',
+    'home.step2.tag':     '— move between formulas and optima',
+    'home.step3.label':   'Build intuition',
+    'home.step3.tag':     '— see greedy traps and convexity',
+    'home.step4.label':   'Bridge to practice',
+    'home.step4.tag':     '— translation skills and real tools',
+    'lessonNav.prev':     '← PREV',
+    'lessonNav.next':     'NEXT →',
+  },
+};
+
+const LangContext = createContext({ lang: 'ja', t: (k) => k, setLang: () => {} });
+
+function useT() {
+  const ctx = useContext(LangContext);
+  return ctx.t;
+}
 
 /* ============================================================
  *  数理最適化を、遊ぶ — 初心者向けインタラクティブ学習アプリ
@@ -420,11 +502,12 @@ const MODULES = [
 ];
 
 function HomeView({ go }) {
+  const t = useT();
   return (
     <div>
       {/* Hero */}
       <div className="mb-12">
-        <Tag bg={C.ink} color={C.paper}>OPTIMIZATION LAB · 2026</Tag>
+        <Tag bg={C.ink} color={C.paper}>{t('home.kicker')}</Tag>
         <h1
           className="mt-4"
           style={{
@@ -433,8 +516,8 @@ function HomeView({ go }) {
             lineHeight: 1.05, color: C.ink, letterSpacing: '-0.01em',
           }}
         >
-          数理最適化<br />
-          <span style={{ color: C.red }}>スターター</span>
+          {t('home.title.line1')}<br />
+          <span style={{ color: C.red }}>{t('home.title.line2')}</span>
         </h1>
         <p
           className="mt-5 max-w-xl"
@@ -442,7 +525,7 @@ function HomeView({ go }) {
             fontFamily: F_DISP, fontSize: '1.1rem', lineHeight: 1.85, color: C.inkSoft,
           }}
         >
-          制約のもとで目的を最大化（最小化）する考え方を、身近な題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。
+          {t('home.lead')}
         </p>
         <div className="mt-6">
           <button
@@ -454,14 +537,14 @@ function HomeView({ go }) {
               cursor: 'pointer', boxShadow: `3px 3px 0 ${C.paperDark}`,
             }}
           >
-            初めての人はここから → Lesson 00
+            {t('home.cta')}
           </button>
         </div>
       </div>
 
       {/* 3要素 - 黒板で定義 */}
       <div style={{ marginBottom: '3rem' }}>
-        <Blackboard label="ESSENCE / 数理最適化を構成する3つの要素">
+        <Blackboard label={t('home.essence.label')}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               { k: '決定変数', v: 'あなたが決められること', ex: 'どれを、いくつ、いつ', color: C.chalkPink },
@@ -506,10 +589,10 @@ function HomeView({ go }) {
               {g.kicker}
             </span>
             <span style={{ fontFamily: F_DISP, fontSize: '1.05rem', color: C.ink, fontWeight: 600 }}>
-              {g.label}
+              {t(g.labelKey)}
             </span>
             <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>
-              {g.tagline}
+              {t(g.tagKey)}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -576,36 +659,13 @@ function HomeView({ go }) {
   );
 }
 
-// Step grouping for the home view (learning ladder)
+// Step grouping for the home view (learning ladder).
+// label/tagline は i18n key を保持し、レンダリング時に t() で解決する。
 const HOME_GROUPS = [
-  {
-    kicker: 'STEP 1',
-    label: '言葉に慣れる',
-    tagline: '— 数式の前に、3要素を体に入れる',
-    color: C.green,
-    ids: ['intro', 'explosion'],
-  },
-  {
-    kicker: 'STEP 2',
-    label: '解いてみる',
-    tagline: '— 古典問題で式と最適解を行き来する',
-    color: C.red,
-    ids: ['lp', 'knapsack', 'transport', 'shift', 'setcover', 'facility', 'portfolio'],
-  },
-  {
-    kicker: 'STEP 3',
-    label: '直感をつかむ',
-    tagline: '— 貪欲のクセと凸性を見る',
-    color: C.blue,
-    ids: ['landscape'],
-  },
-  {
-    kicker: 'STEP 4',
-    label: '実務に繋ぐ',
-    tagline: '— 翻訳と道具の橋渡し',
-    color: C.yellow,
-    ids: ['modeling', 'toolchain'],
-  },
+  { kicker: 'STEP 1', labelKey: 'home.step1.label', tagKey: 'home.step1.tag', color: C.green,  ids: ['intro', 'explosion'] },
+  { kicker: 'STEP 2', labelKey: 'home.step2.label', tagKey: 'home.step2.tag', color: C.red,    ids: ['lp', 'knapsack', 'transport', 'shift', 'setcover', 'facility', 'portfolio'] },
+  { kicker: 'STEP 3', labelKey: 'home.step3.label', tagKey: 'home.step3.tag', color: C.blue,   ids: ['landscape'] },
+  { kicker: 'STEP 4', labelKey: 'home.step4.label', tagKey: 'home.step4.tag', color: C.yellow, ids: ['modeling', 'toolchain'] },
 ];
 
 // === INTRO MODULE =====================================================
@@ -3554,20 +3614,21 @@ function StatusBox({ label, value, unit, bad, warn }) {
 // === HEADER + APP =====================================================
 
 function Header({ view, setView }) {
+  const { lang, setLang, t } = useContext(LangContext);
   const tabs = [
-    { id: 'home',      no: '',   name: 'はじめに' },
-    { id: 'intro',     no: '00', name: '入門' },
-    { id: 'lp',        no: '01', name: 'LP' },
-    { id: 'explosion', no: '02', name: '爆発' },
-    { id: 'knapsack',  no: '03', name: 'ナップサック' },
-    { id: 'transport', no: '04', name: '輸送' },
-    { id: 'landscape', no: '05', name: '山と谷' },
-    { id: 'shift',     no: '06', name: 'シフト' },
-    { id: 'setcover',  no: '07', name: '集合被覆' },
-    { id: 'facility',  no: '08', name: '施設配置' },
-    { id: 'portfolio', no: '09', name: 'ポートフォリオ' },
-    { id: 'modeling',  no: '10', name: 'モデリング' },
-    { id: 'toolchain', no: '11', name: '道具' },
+    { id: 'home',      no: '',   key: 'nav.home' },
+    { id: 'intro',     no: '00', key: 'nav.intro' },
+    { id: 'lp',        no: '01', key: 'nav.lp' },
+    { id: 'explosion', no: '02', key: 'nav.explosion' },
+    { id: 'knapsack',  no: '03', key: 'nav.knapsack' },
+    { id: 'transport', no: '04', key: 'nav.transport' },
+    { id: 'landscape', no: '05', key: 'nav.landscape' },
+    { id: 'shift',     no: '06', key: 'nav.shift' },
+    { id: 'setcover',  no: '07', key: 'nav.setcover' },
+    { id: 'facility',  no: '08', key: 'nav.facility' },
+    { id: 'portfolio', no: '09', key: 'nav.portfolio' },
+    { id: 'modeling',  no: '10', key: 'nav.modeling' },
+    { id: 'toolchain', no: '11', key: 'nav.toolchain' },
   ];
   return (
     <header
@@ -3591,13 +3652,14 @@ function Header({ view, setView }) {
           OPTIMIZATION LAB <span style={{ color: C.red }}>·</span>
         </button>
         <nav className="flex gap-1 flex-wrap">
-          {tabs.map((t) => {
-            const active = view === t.id;
+          {tabs.map((tab) => {
+            const active = view === tab.id;
+            const name = t(tab.key);
             return (
               <button
-                key={t.id}
-                onClick={() => setView(t.id)}
-                aria-label={t.no ? `Lesson ${t.no} ${t.name}` : t.name}
+                key={tab.id}
+                onClick={() => setView(tab.id)}
+                aria-label={tab.no ? `Lesson ${tab.no} ${name}` : name}
                 aria-current={active ? 'page' : undefined}
                 style={{
                   background: active ? C.ink : 'transparent',
@@ -3606,17 +3668,31 @@ function Header({ view, setView }) {
                   padding: '0.4rem 0.7rem',
                   fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.04em',
                   cursor: 'pointer',
-                  minWidth: t.no ? 32 : undefined,
+                  minWidth: tab.no ? 32 : undefined,
                   textAlign: 'center',
                 }}
               >
-                {t.no ? <span>{t.no}</span> : null}
-                <span className={t.no ? 'hidden md:inline' : ''} style={{ marginLeft: t.no ? 4 : 0 }}>
-                  {t.name}
+                {tab.no ? <span>{tab.no}</span> : null}
+                <span className={tab.no ? 'hidden md:inline' : ''} style={{ marginLeft: tab.no ? 4 : 0 }}>
+                  {name}
                 </span>
               </button>
             );
           })}
+          <button
+            onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')}
+            aria-label="Switch language"
+            style={{
+              background: 'transparent',
+              color: C.inkSoft,
+              border: `1px solid ${C.pageEdge}`,
+              padding: '0.3rem 0.6rem', marginLeft: 6,
+              fontFamily: F_MONO, fontSize: 11,
+              cursor: 'pointer',
+            }}
+          >
+            {t('lang.switch')}
+          </button>
         </nav>
       </div>
     </header>
@@ -3624,6 +3700,7 @@ function Header({ view, setView }) {
 }
 
 function LessonNav({ view, setView }) {
+  const t = useT();
   const idx = MODULES.findIndex((m) => m.id === view);
   if (idx < 0) return null;
   const prev = idx > 0 ? MODULES[idx - 1] : null;
@@ -3647,7 +3724,7 @@ function LessonNav({ view, setView }) {
       }}
     >
       <div style={{ fontSize: 10, color: C.inkLight, letterSpacing: '0.1em' }}>
-        {dir === 'next' ? 'NEXT →' : '← PREV'}
+        {dir === 'next' ? t('lessonNav.next') : t('lessonNav.prev')}
       </div>
       <div style={{ fontFamily: F_DISP, fontSize: 14, color: C.ink, fontWeight: 600, marginTop: 2,
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -3667,6 +3744,9 @@ function LessonNav({ view, setView }) {
 
 export default function App() {
   const [view, setView] = useState('home');
+  const [lang, setLang] = useState(() =>
+    typeof navigator !== 'undefined' && navigator.language?.startsWith('en') ? 'en' : 'ja'
+  );
   const mainRef = useRef(null);
 
   // ビュー変更時に main にフォーカス + ページトップへ。スクリーンリーダーが新規コンテンツを読み上げる。
@@ -3676,6 +3756,13 @@ export default function App() {
     if (mainRef.current) mainRef.current.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') document.documentElement.lang = lang;
+  }, [lang]);
+
+  const t = useMemo(() => (k) => I18N[lang]?.[k] ?? I18N.ja[k] ?? k, [lang]);
+  const langValue = useMemo(() => ({ lang, setLang, t }), [lang, t]);
 
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -3705,50 +3792,52 @@ export default function App() {
     main:focus { outline: none; }
   `;
   return (
-    <div
-      style={{
-        background: C.page, color: C.ink, fontFamily: F_BODY,
-        minHeight: '100vh',
-        position: 'relative',
-      }}
-    >
-      <style>{styles}</style>
-      <a href="#main" className="skip-link"
-        onClick={(e) => {
-          e.preventDefault();
-          mainRef.current?.focus();
-          window.scrollTo({ top: 0 });
-        }}>
-        本文へスキップ
-      </a>
-      <Header view={view} setView={setView} />
-      <main id="main" ref={mainRef} tabIndex={-1}
-        className="max-w-5xl mx-auto px-6 py-10"
-        aria-live="polite">
-        {view === 'home' && <HomeView go={setView} />}
-        {view === 'intro' && <IntroView />}
-        {view === 'lp' && <LPView />}
-        {view === 'explosion' && <ExplosionView />}
-        {view === 'knapsack' && <KnapsackView />}
-        {view === 'transport' && <TransportView />}
-        {view === 'landscape' && <LandscapeView />}
-        {view === 'shift' && <ShiftView />}
-        {view === 'setcover' && <SetCoverView />}
-        {view === 'facility' && <FacilityView />}
-        {view === 'portfolio' && <PortfolioView />}
-        {view === 'modeling' && <ModelingView />}
-        {view === 'toolchain' && <ToolchainView />}
-        {view !== 'home' && <LessonNav view={view} setView={setView} />}
-      </main>
-      <footer
-        className="max-w-5xl mx-auto px-6 py-8"
+    <LangContext.Provider value={langValue}>
+      <div
         style={{
-          borderTop: `1px solid ${C.pageEdge}`, marginTop: '3rem',
-          fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.08em',
+          background: C.page, color: C.ink, fontFamily: F_BODY,
+          minHeight: '100vh',
+          position: 'relative',
         }}
       >
-        OPTIMIZATION LAB — 触って学ぶ数理最適化 / built with React
-      </footer>
-    </div>
+        <style>{styles}</style>
+        <a href="#main" className="skip-link"
+          onClick={(e) => {
+            e.preventDefault();
+            mainRef.current?.focus();
+            window.scrollTo({ top: 0 });
+          }}>
+          {t('app.skip')}
+        </a>
+        <Header view={view} setView={setView} />
+        <main id="main" ref={mainRef} tabIndex={-1}
+          className="max-w-5xl mx-auto px-6 py-10"
+          aria-live="polite">
+          {view === 'home' && <HomeView go={setView} />}
+          {view === 'intro' && <IntroView />}
+          {view === 'lp' && <LPView />}
+          {view === 'explosion' && <ExplosionView />}
+          {view === 'knapsack' && <KnapsackView />}
+          {view === 'transport' && <TransportView />}
+          {view === 'landscape' && <LandscapeView />}
+          {view === 'shift' && <ShiftView />}
+          {view === 'setcover' && <SetCoverView />}
+          {view === 'facility' && <FacilityView />}
+          {view === 'portfolio' && <PortfolioView />}
+          {view === 'modeling' && <ModelingView />}
+          {view === 'toolchain' && <ToolchainView />}
+          {view !== 'home' && <LessonNav view={view} setView={setView} />}
+        </main>
+        <footer
+          className="max-w-5xl mx-auto px-6 py-8"
+          style={{
+            borderTop: `1px solid ${C.pageEdge}`, marginTop: '3rem',
+            fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.08em',
+          }}
+        >
+          {t('app.footer')}
+        </footer>
+      </div>
+    </LangContext.Provider>
   );
 }
