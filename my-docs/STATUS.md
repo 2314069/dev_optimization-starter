@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（既存レッスン接続文 追加時点）
+> 最終更新: 2026-05-09（UI/UX 改善 1: ナビゲーション・ホーム）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -37,7 +37,8 @@
 | `d00b632` | Add Lesson 05 (landscape): local vs global optimum |
 | `0216d0e` | Add STATUS.md |
 | `14d6446` | Add Lesson 10 (modeling): chip-classification exercise（toolchain 10→11 へ繰り下げ） |
-| _次commit_ | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
+| `ff9c8d7` | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
+| _次commit_ | UI/UX 改善 1: hero CTA / home grouping / mobile-friendly tabs / lesson prev-next nav |
 
 ## 4. 残 TODO
 
@@ -51,7 +52,26 @@
 
 無し（仕様書定義の5本はすべて完了）
 
-> このプロジェクトのスコープ内 TODO は完了。残るは §5 のスコープ外項目のみ。
+### 4.3 UI/UX レビュー（2026-05-09）からの改善
+
+- [x] #1 ヘッダータブのモバイル対応（番号のみ → md以上で全ラベル）
+- [x] #2 レッスン末尾に前後ナビ（`LessonNav`）
+- [x] #3 ホームのカードを STEP 1〜4 にグループ化
+- [x] ヒーロー直下に「初めての人はここから → Lesson 00」CTA
+- [ ] #4 ボタンラベル統一（リセット / やり直し）
+- [ ] #5 ModelingView 採点トグル化
+- [ ] #6 Landscape 配色を 3要素色から外す
+- [ ] #7 IntroView：多解性の注釈
+- [ ] #8 ExplosionView：初期 n=30
+- [ ] #9 LandscapeView：ジャンプ探索のシーケンシャル表示
+- [ ] #10 ModelingView：採点後に「変数 / 目的 / 制約」の正解構造化表示
+- [ ] #11 ToolchainView：コードのコピーボタン
+- [ ] #12 SVG に `<title>` 追加
+- [ ] #13 状態を色＋記号で示す
+- [ ] #14 タップ領域 44pt 以上
+- [ ] #15 メタテキストのコントラスト改善（inkLight → inkSoft）
+
+> 仕様書スコープ内 TODO（§4.1, §4.2）は完了。UI/UX 改善は順次反映中。
 
 ## 5. スコープ外（別タスク）
 

@@ -444,6 +444,19 @@ function HomeView({ go }) {
         >
           制約のもとで目的を最大化（最小化）する考え方を、身近な題材で体験する教材です。スライダーやボタンで実際に動かしながら学びます。
         </p>
+        <div className="mt-6">
+          <button
+            onClick={() => go('intro')}
+            style={{
+              background: C.ink, color: C.paper, border: `1.5px solid ${C.ink}`,
+              padding: '0.7rem 1.4rem',
+              fontFamily: F_MONO, fontSize: 13, letterSpacing: '0.05em',
+              cursor: 'pointer', boxShadow: `3px 3px 0 ${C.paperDark}`,
+            }}
+          >
+            初めての人はここから → Lesson 00
+          </button>
+        </div>
       </div>
 
       {/* 3要素 - 黒板で定義 */}
@@ -482,71 +495,118 @@ function HomeView({ go }) {
         </Blackboard>
       </div>
 
-      {/* Module cards */}
-      <div className="mb-4">
-        <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.15em' }}>
-          LESSONS / 全レッスン
-        </span>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {MODULES.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => go(m.id)}
-            className="text-left group"
-            style={{
-              background: C.page,
-              border: `1px solid ${C.pageEdge}`,
-              borderLeft: `3px solid ${m.accent}`,
-              padding: '1.5rem',
-              cursor: 'pointer',
-              boxShadow: `3px 3px 0 ${C.pageEdge}`,
-              transition: 'transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translate(-2px,-2px)';
-              e.currentTarget.style.boxShadow = `5px 5px 0 ${C.pageEdge}`;
-              e.currentTarget.style.borderTopColor = C.frame;
-              e.currentTarget.style.borderRightColor = C.frame;
-              e.currentTarget.style.borderBottomColor = C.frame;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translate(0,0)';
-              e.currentTarget.style.boxShadow = `3px 3px 0 ${C.pageEdge}`;
-              e.currentTarget.style.borderTopColor = C.pageEdge;
-              e.currentTarget.style.borderRightColor = C.pageEdge;
-              e.currentTarget.style.borderBottomColor = C.pageEdge;
-            }}
-          >
-            <div className="flex items-baseline justify-between mb-3">
-              <span
-                style={{
-                  fontFamily: F_MONO, fontSize: 11, color: m.accent,
-                  letterSpacing: '0.2em', fontWeight: 500,
-                }}
-              >
-                {m.no}
-              </span>
-              <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>→</span>
-            </div>
-            <h3 style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>
-              {m.title}
-            </h3>
-            <div style={{ fontFamily: F_MONO, fontSize: 11.5, color: C.inkLight, marginTop: 6, letterSpacing: '0.04em' }}>
-              {m.sub}
-            </div>
-            <p
-              className="mt-3"
-              style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.7 }}
-            >
-              {m.blurb}
-            </p>
-          </button>
-        ))}
-      </div>
+      {/* Module cards (grouped by learning step) */}
+      {HOME_GROUPS.map((g, gi) => (
+        <div key={gi} style={{ marginBottom: '2.5rem' }}>
+          <div className="mb-3 flex items-baseline gap-3">
+            <span style={{
+              fontFamily: F_MONO, fontSize: 11, color: g.color,
+              letterSpacing: '0.18em', fontWeight: 600,
+            }}>
+              {g.kicker}
+            </span>
+            <span style={{ fontFamily: F_DISP, fontSize: '1.05rem', color: C.ink, fontWeight: 600 }}>
+              {g.label}
+            </span>
+            <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>
+              {g.tagline}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {g.ids.map((id) => {
+              const m = MODULES.find((x) => x.id === id);
+              if (!m) return null;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => go(m.id)}
+                  className="text-left group"
+                  style={{
+                    background: C.page,
+                    border: `1px solid ${C.pageEdge}`,
+                    borderLeft: `3px solid ${m.accent}`,
+                    padding: '1.5rem',
+                    cursor: 'pointer',
+                    boxShadow: `3px 3px 0 ${C.pageEdge}`,
+                    transition: 'transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translate(-2px,-2px)';
+                    e.currentTarget.style.boxShadow = `5px 5px 0 ${C.pageEdge}`;
+                    e.currentTarget.style.borderTopColor = C.frame;
+                    e.currentTarget.style.borderRightColor = C.frame;
+                    e.currentTarget.style.borderBottomColor = C.frame;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translate(0,0)';
+                    e.currentTarget.style.boxShadow = `3px 3px 0 ${C.pageEdge}`;
+                    e.currentTarget.style.borderTopColor = C.pageEdge;
+                    e.currentTarget.style.borderRightColor = C.pageEdge;
+                    e.currentTarget.style.borderBottomColor = C.pageEdge;
+                  }}
+                >
+                  <div className="flex items-baseline justify-between mb-3">
+                    <span style={{
+                      fontFamily: F_MONO, fontSize: 11, color: m.accent,
+                      letterSpacing: '0.2em', fontWeight: 500,
+                    }}>
+                      {m.no}
+                    </span>
+                    <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>→</span>
+                  </div>
+                  <h3 style={{ fontFamily: F_DISP, fontSize: '1.5rem', fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>
+                    {m.title}
+                  </h3>
+                  <div style={{ fontFamily: F_MONO, fontSize: 11.5, color: C.inkSoft, marginTop: 6, letterSpacing: '0.04em' }}>
+                    {m.sub}
+                  </div>
+                  <p
+                    className="mt-3"
+                    style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.7 }}
+                  >
+                    {m.blurb}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
+
+// Step grouping for the home view (learning ladder)
+const HOME_GROUPS = [
+  {
+    kicker: 'STEP 1',
+    label: '言葉に慣れる',
+    tagline: '— 数式の前に、3要素を体に入れる',
+    color: C.green,
+    ids: ['intro', 'explosion'],
+  },
+  {
+    kicker: 'STEP 2',
+    label: '解いてみる',
+    tagline: '— 古典問題で式と最適解を行き来する',
+    color: C.red,
+    ids: ['lp', 'knapsack', 'transport', 'shift', 'setcover', 'facility', 'portfolio'],
+  },
+  {
+    kicker: 'STEP 3',
+    label: '直感をつかむ',
+    tagline: '— 貪欲のクセと凸性を見る',
+    color: C.blue,
+    ids: ['landscape'],
+  },
+  {
+    kicker: 'STEP 4',
+    label: '実務に繋ぐ',
+    tagline: '— 翻訳と道具の橋渡し',
+    color: C.yellow,
+    ids: ['modeling', 'toolchain'],
+  },
+];
 
 // === INTRO MODULE =====================================================
 
@@ -3371,19 +3431,19 @@ function StatusBox({ label, value, unit, bad, warn }) {
 
 function Header({ view, setView }) {
   const tabs = [
-    { id: 'home', label: 'はじめに' },
-    { id: 'intro', label: '00 入門' },
-    { id: 'lp', label: '01 LP' },
-    { id: 'explosion', label: '02 爆発' },
-    { id: 'knapsack', label: '03 ナップサック' },
-    { id: 'transport', label: '04 輸送' },
-    { id: 'landscape', label: '05 山と谷' },
-    { id: 'shift', label: '06 シフト' },
-    { id: 'setcover', label: '07 集合被覆' },
-    { id: 'facility', label: '08 施設配置' },
-    { id: 'portfolio', label: '09 ポートフォリオ' },
-    { id: 'modeling', label: '10 モデリング' },
-    { id: 'toolchain', label: '11 道具' },
+    { id: 'home',      no: '',   name: 'はじめに' },
+    { id: 'intro',     no: '00', name: '入門' },
+    { id: 'lp',        no: '01', name: 'LP' },
+    { id: 'explosion', no: '02', name: '爆発' },
+    { id: 'knapsack',  no: '03', name: 'ナップサック' },
+    { id: 'transport', no: '04', name: '輸送' },
+    { id: 'landscape', no: '05', name: '山と谷' },
+    { id: 'shift',     no: '06', name: 'シフト' },
+    { id: 'setcover',  no: '07', name: '集合被覆' },
+    { id: 'facility',  no: '08', name: '施設配置' },
+    { id: 'portfolio', no: '09', name: 'ポートフォリオ' },
+    { id: 'modeling',  no: '10', name: 'モデリング' },
+    { id: 'toolchain', no: '11', name: '道具' },
   ];
   return (
     <header
@@ -3407,25 +3467,76 @@ function Header({ view, setView }) {
           OPTIMIZATION LAB <span style={{ color: C.red }}>·</span>
         </button>
         <nav className="flex gap-1 flex-wrap">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              style={{
-                background: view === t.id ? C.ink : 'transparent',
-                color: view === t.id ? C.paper : C.inkSoft,
-                border: 'none',
-                padding: '0.4rem 0.8rem',
-                fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.04em',
-                cursor: 'pointer',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+          {tabs.map((t) => {
+            const active = view === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setView(t.id)}
+                aria-label={t.no ? `Lesson ${t.no} ${t.name}` : t.name}
+                style={{
+                  background: active ? C.ink : 'transparent',
+                  color: active ? C.paper : C.inkSoft,
+                  border: 'none',
+                  padding: '0.4rem 0.7rem',
+                  fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                  minWidth: t.no ? 32 : undefined,
+                  textAlign: 'center',
+                }}
+              >
+                {t.no ? <span>{t.no}</span> : null}
+                <span className={t.no ? 'hidden md:inline' : ''} style={{ marginLeft: t.no ? 4 : 0 }}>
+                  {t.name}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </div>
     </header>
+  );
+}
+
+function LessonNav({ view, setView }) {
+  const idx = MODULES.findIndex((m) => m.id === view);
+  if (idx < 0) return null;
+  const prev = idx > 0 ? MODULES[idx - 1] : null;
+  const next = idx < MODULES.length - 1 ? MODULES[idx + 1] : null;
+
+  const arrowBtn = (m, dir) => (
+    <button
+      onClick={() => setView(m.id)}
+      style={{
+        background: C.page,
+        border: `1px solid ${C.pageEdge}`,
+        borderLeft: dir === 'next' ? `1px solid ${C.pageEdge}` : `3px solid ${m.accent}`,
+        borderRight: dir === 'next' ? `3px solid ${m.accent}` : `1px solid ${C.pageEdge}`,
+        padding: '0.7rem 1rem',
+        fontFamily: F_MONO, fontSize: 12, color: C.inkSoft,
+        textAlign: dir === 'next' ? 'right' : 'left',
+        cursor: 'pointer',
+        boxShadow: `2px 2px 0 ${C.pageEdge}`,
+        flex: '1 1 0',
+        minWidth: 0,
+      }}
+    >
+      <div style={{ fontSize: 10, color: C.inkLight, letterSpacing: '0.1em' }}>
+        {dir === 'next' ? 'NEXT →' : '← PREV'}
+      </div>
+      <div style={{ fontFamily: F_DISP, fontSize: 14, color: C.ink, fontWeight: 600, marginTop: 2,
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {m.no} {m.title}
+      </div>
+    </button>
+  );
+
+  return (
+    <nav className="flex gap-3 mt-12 pt-6"
+      style={{ borderTop: `1px solid ${C.pageEdge}` }}>
+      {prev ? arrowBtn(prev, 'prev') : <div style={{ flex: '1 1 0' }} />}
+      {next ? arrowBtn(next, 'next') : <div style={{ flex: '1 1 0' }} />}
+    </nav>
   );
 }
 
@@ -3460,6 +3571,7 @@ export default function App() {
         {view === 'portfolio' && <PortfolioView />}
         {view === 'modeling' && <ModelingView />}
         {view === 'toolchain' && <ToolchainView />}
+        {view !== 'home' && <LessonNav view={view} setView={setView} />}
       </main>
       <footer
         className="max-w-5xl mx-auto px-6 py-8"
