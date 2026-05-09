@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（UI/UX 改善 3: 個別レッスンの調整）
+> 最終更新: 2026-05-09（UI/UX 改善 4: a11y / モバイル）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -40,7 +40,8 @@
 | `ff9c8d7` | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
 | `390e78d` | UI/UX 改善 1: hero CTA / home grouping / mobile-friendly tabs / lesson prev-next nav |
 | `cc9c5ea` | UI/UX 改善 2: ボタンラベル統一 / 採点トグル化 / Landscape 配色を中立化 |
-| _次commit_ | UI/UX 改善 3: 多解性注釈 / 爆発初期 n=30 / ジャンプ順次表示 / 構造化解説 / コピーボタン |
+| `93cb4df` | UI/UX 改善 3: 多解性注釈 / 爆発初期 n=30 / ジャンプ順次表示 / 構造化解説 / コピーボタン |
+| _次commit_ | UI/UX 改善 4: SVG aria-label / 倉庫ボタン 44pt / inkLight コントラスト改善 |
 
 ## 4. 残 TODO
 
@@ -68,12 +69,12 @@
 - [x] #9 LandscapeView：ジャンプ探索のシーケンシャル表示（220ms 間隔）
 - [x] #10 ModelingView：採点後に「変数 / 目的 / 制約」の正解を3列カードで表示
 - [x] #11 ToolchainView：コードのコピーボタン（成功で緑トースト）
-- [ ] #12 SVG に `<title>` 追加
-- [ ] #13 状態を色＋記号で示す
-- [ ] #14 タップ領域 44pt 以上
-- [ ] #15 メタテキストのコントラスト改善（inkLight → inkSoft）
+- [x] #12 SVG に `role="img"` + `aria-label` 追加（9枚すべて）
+- [x] #13 状態を色＋記号で示す（✓ / ✗ / ! 既に併用、Landscape 凡例に黒丸/青丸/✕ で形状区別）
+- [x] #14 タップ領域 44pt 以上（FacilityView 倉庫ボタンを `minHeight: 44` に。SetCover 56×56・Shift 56×56・Knapsack 約60px は OK）
+- [x] #15 メタテキストのコントラスト改善（`C.inkLight` を #7a7062 → #5d5446、`C.inkLighter` も濃く）
 
-> 仕様書スコープ内 TODO（§4.1, §4.2）は完了。UI/UX 改善は順次反映中。
+> 仕様書スコープ内 TODO・UI/UX レビュー TODO すべて完了。残るは §5 のスコープ外項目のみ。
 
 ## 5. スコープ外（別タスク）
 

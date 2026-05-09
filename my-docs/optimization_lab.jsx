@@ -18,8 +18,8 @@ const C = {
   paperEdge: '#d6c899',
   ink: '#1a1812',
   inkSoft: '#3d352a',
-  inkLight: '#7a7062',
-  inkLighter: '#bdb39e',
+  inkLight: '#5d5446',     // 旧 #7a7062 — 小サイズテキストでコントラスト不足だったため濃く
+  inkLighter: '#9a9080',   // 旧 #bdb39e — 同上、控えめだが読める色域に
   rule: '#dccfa0',
   margin: '#b94c4a',          // ノート赤マージン
   rule2: '#7a9bb5',           // ノート横罫
@@ -667,7 +667,8 @@ function IntroView() {
 
       <Card accent={C.green}>
         <Blackboard label="LUNCH BOX / お弁当箱" style={{ marginBottom: '1rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="お弁当箱：4つの仕切りに各おかずを個数分タイルで並べた図"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             {/* Outer box */}
             <rect x={M} y={M} width={SW - 2 * M} height={SH - 2 * M}
               fill="none" stroke={C.chalk} strokeWidth={2.5} />
@@ -941,7 +942,8 @@ function LPView() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
           {/* SVG - 黒板 */}
           <Blackboard label="LP / 図解">
-            <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+            <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="2変数LPの実行可能領域。頂点と目的関数の等高線、最適頂点を強調"
+              style={{ width: '100%', height: 'auto', display: 'block' }}>
               {/* グリッド（チョーク薄影） */}
               {[...Array(7)].map((_, i) => {
                 const t = i * 5;
@@ -1279,7 +1281,8 @@ function ExplosionView() {
         </div>
 
         <Blackboard label="GROWTH / 計算量の伸び（縦軸 log）" style={{ marginTop: '1.2rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="ログ目盛で 2^n / n×W / n の計算量曲線を比較。指数だけ右上に直線的に伸びる"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             <line x1={M} y1={SH - M} x2={SW - M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
             <line x1={M} y1={M} x2={M} y2={SH - M} stroke={C.chalk} strokeWidth={1.5} />
 
@@ -1625,7 +1628,8 @@ function TransportView() {
       <Card accent={C.yellow}>
         {/* Diagram - 黒板 */}
         <Blackboard label="NETWORK / 配送図" style={{ marginBottom: '1rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="2工場と3店舗の配送ネットワーク。各経路に流量がエッジ太さで表示"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             {/* Flows */}
             {flows.map((f, i) => {
               const a = wPos[f.from], b = sPos[f.to];
@@ -1899,7 +1903,8 @@ function LandscapeView() {
 
       <Card accent={C.blue}>
         <Blackboard label="LANDSCAPE / 1次元の凸凹関数" style={{ marginBottom: '1rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="複数の谷を持つ1変数関数。貪欲法の軌跡（黒）、ジャンプ探索（青）、真の最小（黄）"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             <line x1={M} y1={sy(0)} x2={SW - M} y2={sy(0)}
               stroke={C.chalkSoft} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
             {[0, 2, 4, 6, 8, 10].map((x) => (
@@ -2343,7 +2348,8 @@ function SetCoverView() {
 
       <Card accent={C.red}>
         <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="町の4×3グリッドと、選択された消防署候補がカバーする範囲"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             {cells.map((cell) => {
               const cx = M + (cell.x + 0.5) * cw, cy = M + (cell.y + 0.5) * ch;
               const cnt = cellCoverCount(cell.id);
@@ -2580,7 +2586,8 @@ function FacilityView() {
 
       <Card accent={C.yellow}>
         <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem', marginBottom: '1rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="倉庫候補4箇所と需要点5箇所の地図。開設中の倉庫から需要点への割当が点線で表示"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             {[0, 1, 2, 3, 4, 5, 6].map((x) => (
               <line key={`gx${x}`} x1={sx(x)} y1={sy(0)} x2={sx(x)} y2={sy(4)} stroke="#eee" strokeWidth={0.5} />
             ))}
@@ -2653,7 +2660,8 @@ function FacilityView() {
                     onClick={() => toggle(w.id)}
                     disabled={reveal}
                     style={{
-                      padding: '0.5rem 0.7rem',
+                      padding: '0.7rem 0.9rem',
+                      minHeight: 44,
                       background: isOpen ? C.yellow : C.page,
                       color: isOpen ? C.page : C.ink,
                       border: `1.5px solid ${isOpen ? C.yellowDeep : C.frame}`,
@@ -2831,7 +2839,8 @@ function PortfolioView() {
         </div>
 
         <div style={{ background: C.boardLight, border: `1px solid ${C.pageEdge}`, padding: '0.6rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="リスク（横）×期待リターン（縦）平面上の各資産と現在のポートフォリオ位置、効率的フロンティア"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             {[0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30].map((x) => (
               <g key={`gx${x}`}>
                 <line x1={sx(x)} y1={sy(0)} x2={sx(x)} y2={sy(retMax)} stroke="#eee" strokeWidth={0.5} />
@@ -3441,7 +3450,8 @@ function ToolchainView() {
       <SectionTitle num="11.2">解くまでの流れ</SectionTitle>
       <Card>
         <Blackboard label="PIPELINE / SOLVE FLOW">
-          <svg viewBox="0 0 720 200" style={{ width: '100%', height: 'auto', display: 'block' }}>
+          <svg viewBox="0 0 720 200" role="img" aria-label="解くまでの流れ：あなたの問題 → モデリング言語 → 標準形 → ソルバー"
+            style={{ width: '100%', height: 'auto', display: 'block' }}>
             <defs>
               <marker id="arrToolchain" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
                 <path d="M0,0 L10,5 L0,10 Z" fill={C.chalk} />
