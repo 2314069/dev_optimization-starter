@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 /* ============================================================
  *  数理最適化を、遊ぶ — 初心者向けインタラクティブ学習アプリ
@@ -777,6 +777,9 @@ function IntroView() {
               最適: <b style={{ color: C.chalkYellow }}>{opt.joy}点</b>
               <br />
               {opt.qty.map((q, i) => q > 0 ? `${DISHES[i].name}×${q}` : null).filter(Boolean).join(' / ')}
+              <div style={{ marginTop: 6, fontSize: 9, color: C.chalkSoft, fontStyle: 'italic' }}>
+                ※ 同じ {opt.joy} 点を出す組み合わせは他にもある
+              </div>
             </div>
           </div>
         </div>
@@ -1192,7 +1195,7 @@ function formatTime(seconds) {
 }
 
 function ExplosionView() {
-  const [n, setN] = useState(20);
+  const [n, setN] = useState(30);
 
   const patterns = Math.pow(2, n);
   const W = 100;
@@ -1826,8 +1829,21 @@ function LandscapeView() {
   const xMin = 0, xMax = 10;
   const [startX, setStartX] = useState(2.0);
   const [showJump, setShowJump] = useState(false);
+  const [jumpCount, setJumpCount] = useState(0);
 
   const greedyPath = useMemo(() => runGreedyDescent(startX, xMin, xMax), [startX]);
+
+  useEffect(() => {
+    if (!showJump) { setJumpCount(0); return; }
+    setJumpCount(0);
+    const id = setInterval(() => {
+      setJumpCount((c) => {
+        if (c >= 8) { clearInterval(id); return 8; }
+        return c + 1;
+      });
+    }, 220);
+    return () => clearInterval(id);
+  }, [showJump]);
 
   const jumpData = useMemo(() => {
     const N = 8;
@@ -1898,7 +1914,7 @@ function LandscapeView() {
 
             <polyline points={landscapePath} fill="none" stroke={C.chalk} strokeWidth={2} />
 
-            {showJump && jumpData.paths.map((p, i) => (
+            {showJump && jumpData.paths.slice(0, jumpCount).map((p, i) => (
               <g key={`jp${i}`} opacity={0.6}>
                 {p.map((x, j) => (
                   <circle key={j} cx={sx(x)} cy={sy(landscape(x))} r={1.6}
@@ -1948,6 +1964,11 @@ function LandscapeView() {
               <Btn variant="primary" size="sm" onClick={() => setShowJump(!showJump)}>
                 {showJump ? 'ジャンプ探索を隠す' : 'ジャンプ探索を試す'}
               </Btn>
+              {showJump && (
+                <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkSoft, alignSelf: 'center' }}>
+                  {jumpCount} / 8 投下中…
+                </span>
+              )}
             </div>
             <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
               ● 黒丸 = 貪欲法の軌跡（終点は到達点で <span style={{ color: C.green }}>緑＝成功</span> / <span style={{ color: C.red }}>赤＝局所に固着</span>）<br />
@@ -2988,6 +3009,11 @@ const MODELING_PROBLEMS = [
       { id: 'c4', text: '15×（ショート）＋ 25×（モンブラン）≤ 480',          ans: 'cons' },
       { id: 'c5', text: '個数 ≥ 0',                                          ans: 'cons' },
     ],
+    answer: {
+      var:  ['x_s = ショートケーキ個数', 'x_m = モンブラン個数'],
+      obj:  ['maximize  300·x_s + 500·x_m'],
+      cons: ['15·x_s + 25·x_m ≤ 480', 'x_s, x_m ≥ 0'],
+    },
     explain:
       '典型的な LP（線形計画）。「いくつ作るか」が変数、「合計利益」が目的、「時間と非負」が制約。' +
       '個数を整数に縛ると IP（整数計画）。Lesson 01・03 と同じ骨格。',
@@ -3008,6 +3034,13 @@ const MODELING_PROBLEMS = [
       { id: 't4', text: '各乗客は 1 台にだけ乗る',                  ans: 'cons' },
       { id: 't5', text: '0 か 1 のどちらかしかとらない',            ans: 'cons' },
     ],
+    answer: {
+      var:  ['x_{ij} ∈ {0, 1}　（タクシー i が乗客 j を乗せるなら 1）'],
+      obj:  ['maximize  Σ_{i,j} c_{ij} · x_{ij}'],
+      cons: ['Σ_j x_{ij} ≤ 1　∀i  （タクシー i は最大 1 人）',
+             'Σ_i x_{ij} ≤ 1　∀j  （乗客 j は最大 1 台）',
+             'x_{ij} ∈ {0, 1}'],
+    },
     explain:
       '0/1 整数変数を使う「割当問題」。Lesson 04（輸送）の特殊形（容量・需要が 1）であり、' +
       'MIP（混合整数計画）の典型例。シフト・マッチングなど応用は広い。',
@@ -3027,6 +3060,11 @@ const MODELING_PROBLEMS = [
       { id: 'r3', text: '所要時間の合計が 12 時間以内',    ans: 'cons' },
       { id: 'r4', text: '0 か 1 のどちらかしかとらない',   ans: 'cons' },
     ],
+    answer: {
+      var:  ['x_i ∈ {0, 1}　（スポット i を訪れるなら 1）'],
+      obj:  ['maximize  Σ_i u_i · x_i　（u_i = 満足度）'],
+      cons: ['Σ_i t_i · x_i ≤ 12　（t_i = 所要時間 / h）', 'x_i ∈ {0, 1}'],
+    },
     explain:
       '0/1 ナップサック（Lesson 03 そのもの）。旅行・予算配分・特集記事の選定など、' +
       '「枠の中で何を選ぶか」という形は驚くほど多くの場面に現れる。',
@@ -3170,9 +3208,33 @@ function ModelingView() {
         {graded && (
           <div style={{
             background: C.paperDark, border: `1px dashed ${C.gridDark}`,
-            padding: '0.9rem 1rem', marginTop: '1rem',
+            padding: '1rem 1.1rem', marginTop: '1rem',
           }}>
-            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.15em', marginBottom: 6 }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkSoft, letterSpacing: '0.15em', marginBottom: 10 }}>
+              FORMAL ANSWER / 数式に翻訳すると
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3" style={{ marginBottom: 14 }}>
+              {[
+                { key: 'var',  label: '決定変数', color: C.red },
+                { key: 'obj',  label: '目的関数', color: C.blue },
+                { key: 'cons', label: '制約条件', color: C.yellow },
+              ].map((s) => (
+                <div key={s.key} style={{
+                  background: C.paperLight, borderTop: `2px solid ${s.color}`,
+                  padding: '0.55rem 0.7rem',
+                }}>
+                  <div style={{ fontFamily: F_MONO, fontSize: 10, color: s.color, letterSpacing: '0.1em', fontWeight: 600 }}>
+                    {s.label}
+                  </div>
+                  <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none', fontFamily: F_MONO, fontSize: 12, color: C.ink, lineHeight: 1.7 }}>
+                    {problem.answer[s.key].map((line, li) => (
+                      <li key={li} style={{ paddingLeft: 4 }}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkSoft, letterSpacing: '0.15em', marginBottom: 6 }}>
               EXPLANATION
             </div>
             <div style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, lineHeight: 1.9 }}>
@@ -3251,7 +3313,18 @@ End`,
 
 function ToolchainView() {
   const [tab, setTab] = useState('pulp');
+  const [copied, setCopied] = useState(false);
   const code = TOOLCHAIN_CODE[tab];
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div>
@@ -3328,14 +3401,32 @@ function ToolchainView() {
         </div>
 
         <div style={{
+          position: 'relative',
           background: '#1f1f1f', color: '#e6e6e6',
           padding: '0.9rem 1.1rem 1rem',
           fontFamily: F_MONO, fontSize: 12.5, lineHeight: 1.65,
           overflow: 'auto', borderRadius: 2,
           boxShadow: `2px 3px 0 ${C.pageEdge}`,
         }}>
-          <div style={{ color: '#9aa0a6', fontSize: 10, letterSpacing: '0.1em', marginBottom: 8, fontFamily: F_MONO }}>
-            $ {code.file}
+          <div className="flex justify-between items-center" style={{ marginBottom: 8 }}>
+            <div style={{ color: '#9aa0a6', fontSize: 10, letterSpacing: '0.1em', fontFamily: F_MONO }}>
+              $ {code.file}
+            </div>
+            <button
+              onClick={copyCode}
+              aria-label="コードをコピー"
+              style={{
+                background: copied ? '#2a8543' : 'transparent',
+                color: copied ? '#ffffff' : '#9aa0a6',
+                border: `1px solid ${copied ? '#2a8543' : '#4a4a4a'}`,
+                padding: '0.2rem 0.6rem',
+                fontFamily: F_MONO, fontSize: 10, letterSpacing: '0.05em',
+                cursor: 'pointer',
+                borderRadius: 2,
+              }}
+            >
+              {copied ? '✓ コピー済' : 'コピー'}
+            </button>
           </div>
           <pre style={{ margin: 0, whiteSpace: 'pre' }}>{code.code}</pre>
         </div>

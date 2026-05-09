@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（UI/UX 改善 2: 統一・色）
+> 最終更新: 2026-05-09（UI/UX 改善 3: 個別レッスンの調整）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -39,7 +39,8 @@
 | `14d6446` | Add Lesson 10 (modeling): chip-classification exercise（toolchain 10→11 へ繰り下げ） |
 | `ff9c8d7` | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
 | `390e78d` | UI/UX 改善 1: hero CTA / home grouping / mobile-friendly tabs / lesson prev-next nav |
-| _次commit_ | UI/UX 改善 2: ボタンラベル統一 / 採点トグル化 / Landscape 配色を中立化 |
+| `cc9c5ea` | UI/UX 改善 2: ボタンラベル統一 / 採点トグル化 / Landscape 配色を中立化 |
+| _次commit_ | UI/UX 改善 3: 多解性注釈 / 爆発初期 n=30 / ジャンプ順次表示 / 構造化解説 / コピーボタン |
 
 ## 4. 残 TODO
 
@@ -62,11 +63,11 @@
 - [x] #4 ボタンラベル統一（やり直し / 空にする / すべて閉鎖 → リセット）
 - [x] #5 ModelingView 採点トグル化（編集に戻る／採点する）
 - [x] #6 Landscape 配色を 3要素色から外す（貪欲の軌跡を chalk 黒に）
-- [ ] #7 IntroView：多解性の注釈
-- [ ] #8 ExplosionView：初期 n=30
-- [ ] #9 LandscapeView：ジャンプ探索のシーケンシャル表示
-- [ ] #10 ModelingView：採点後に「変数 / 目的 / 制約」の正解構造化表示
-- [ ] #11 ToolchainView：コードのコピーボタン
+- [x] #7 IntroView：多解性の注釈
+- [x] #8 ExplosionView：初期 n=30
+- [x] #9 LandscapeView：ジャンプ探索のシーケンシャル表示（220ms 間隔）
+- [x] #10 ModelingView：採点後に「変数 / 目的 / 制約」の正解を3列カードで表示
+- [x] #11 ToolchainView：コードのコピーボタン（成功で緑トースト）
 - [ ] #12 SVG に `<title>` 追加
 - [ ] #13 状態を色＋記号で示す
 - [ ] #14 タップ領域 44pt 以上
