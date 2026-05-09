@@ -830,6 +830,13 @@ function LPView() {
     <div>
       <ModuleHeader kicker="LESSON 01" title="工場の社長になる" subtitle="2D LINEAR PROGRAMMING" accent={C.red} />
 
+      <div style={{
+        fontFamily: F_MONO, fontSize: 11, color: C.inkLight,
+        letterSpacing: '0.05em', marginBottom: 10, marginLeft: 2,
+      }}>
+        ← <b style={{ color: C.inkSoft }}>Lesson 00</b> で言葉だけだった「変数・目的・制約」が、ここで初めて <b style={{ color: C.inkSoft }}>式</b> になる。
+      </div>
+
       <Story>
         レモネードAとB、2種類を売って利益を最大化したい。<br />
         手元の砂糖は40、レモンは50しかない。<br />
@@ -1336,6 +1343,13 @@ function KnapsackView() {
   return (
     <div>
       <ModuleHeader kicker="LESSON 03" title="旅の荷物を詰める" subtitle="0/1 KNAPSACK PROBLEM" accent={C.blue} />
+
+      <div style={{
+        fontFamily: F_MONO, fontSize: 11, color: C.inkLight,
+        letterSpacing: '0.05em', marginBottom: 10, marginLeft: 2,
+      }}>
+        ← <b style={{ color: C.inkSoft }}>Lesson 02</b> で見たとおり全列挙は <b style={{ color: C.inkSoft }}>n=20 あたりが限界</b>。ここでは小さい n で最適と貪欲を比べる。
+      </div>
 
       <Story>
         キャンプに持っていく荷物を選ぶ。<br />
@@ -2007,6 +2021,13 @@ function ShiftView() {
   return (
     <div>
       <ModuleHeader kicker="LESSON 06" title="シフトを組む" subtitle="STAFF SCHEDULING" accent={C.green} />
+
+      <div style={{
+        fontFamily: F_MONO, fontSize: 11, color: C.inkLight,
+        letterSpacing: '0.05em', marginBottom: 10, marginLeft: 2,
+      }}>
+        ← この章の「自動配置」は <b style={{ color: C.inkSoft }}>貪欲法</b> なので、必ずしも最適解にならない（<b style={{ color: C.inkSoft }}>Lesson 05</b>「山と谷」を思い出して）。
+      </div>
 
       <Story>
         スタッフ <b>4 人</b>で月〜金のシフトを組む。<br />

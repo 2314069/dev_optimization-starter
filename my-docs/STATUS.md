@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-08（Lesson 10 modeling 追加時点）
+> 最終更新: 2026-05-09（既存レッスン接続文 追加時点）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -36,19 +36,22 @@
 | `99d0c14` | Add Lesson 09 (toolchain) ※当時の番号、現在は 11 |
 | `d00b632` | Add Lesson 05 (landscape): local vs global optimum |
 | `0216d0e` | Add STATUS.md |
-| _次commit_ | Add Lesson 10 (modeling): chip-classification exercise（toolchain 10→11 へ繰り下げ） |
+| `14d6446` | Add Lesson 10 (modeling): chip-classification exercise（toolchain 10→11 へ繰り下げ） |
+| _次commit_ | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
 
 ## 4. 残 TODO
 
 ### 4.1 既存の小さな調整（仕様書 §3）
 
-- [ ] Lesson 01 LP 冒頭に「Lesson 00 の3点セットがここで初めて式になる」と接続文
-- [ ] Lesson 03 ナップサック冒頭に「Lesson 02（爆発）から、全列挙は n=20 が限界」と接続文
-- [ ] Lesson 06 シフト冒頭に「autoSolve は貪欲なので局所最適。詳しくは Lesson 05」と接続文
+- [x] Lesson 01 LP 冒頭に「Lesson 00 の3点セットがここで初めて式になる」と接続文
+- [x] Lesson 03 ナップサック冒頭に「Lesson 02（爆発）から、全列挙は n=20 が限界」と接続文
+- [x] Lesson 06 シフト冒頭に「autoSolve は貪欲なので局所最適。詳しくは Lesson 05」と接続文
 
 ### 4.2 新規レッスン
 
 無し（仕様書定義の5本はすべて完了）
+
+> このプロジェクトのスコープ内 TODO は完了。残るは §5 のスコープ外項目のみ。
 
 ## 5. スコープ外（別タスク）
 
