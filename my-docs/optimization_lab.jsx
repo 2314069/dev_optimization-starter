@@ -1593,8 +1593,25 @@ function TransportView() {
          + cost[1][0] * x21 + cost[1][1] * x22 + cost[1][2] * x23;
   }, [x11, x12, x13, x21, x22, x23]);
 
-  // 最適解 (前計算): x11=15, x12=5, x13=0, x21=0, x22=5, x23=20, cost=130
-  const opt = { x11: 15, x12: 5, x13: 0, x21: 0, x22: 5, x23: 20, cost: 130 };
+  // 最適解：(x11, x12) を全格子点で総当たりし、最小コストを探す。
+  // 整数 RHS の輸送LP は完全単模行列性により整数最適解を持つので、整数探索で十分。
+  const opt = useMemo(() => {
+    let best = { x11: 0, x12: 0, x13: 0, x21: 0, x22: 0, x23: 0, cost: Infinity };
+    for (let a = 0; a <= 15; a++) {
+      for (let b = 0; b <= 10; b++) {
+        const x13_ = 20 - a - b;
+        const x21_ = 15 - a;
+        const x22_ = 10 - b;
+        const x23_ = a + b;
+        if (x13_ < 0 || x21_ < 0 || x22_ < 0 || x23_ < 0) continue;
+        if (x23_ > 25) continue; // W2 容量
+        const c = cost[0][0] * a + cost[0][1] * b + cost[0][2] * x13_
+                + cost[1][0] * x21_ + cost[1][1] * x22_ + cost[1][2] * x23_;
+        if (c < best.cost) best = { x11: a, x12: b, x13: x13_, x21: x21_, x22: x22_, x23: x23_, cost: c };
+      }
+    }
+    return best;
+  }, []);
 
   const display = revealOpt
     ? opt
