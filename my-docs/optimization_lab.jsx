@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 
 /* ============================================================
  *  数理最適化を、遊ぶ — 初心者向けインタラクティブ学習アプリ
@@ -3598,6 +3598,7 @@ function Header({ view, setView }) {
                 key={t.id}
                 onClick={() => setView(t.id)}
                 aria-label={t.no ? `Lesson ${t.no} ${t.name}` : t.name}
+                aria-current={active ? 'page' : undefined}
                 style={{
                   background: active ? C.ink : 'transparent',
                   color: active ? C.paper : C.inkSoft,
@@ -3666,10 +3667,42 @@ function LessonNav({ view, setView }) {
 
 export default function App() {
   const [view, setView] = useState('home');
+  const mainRef = useRef(null);
+
+  // ビュー変更時に main にフォーカス + ページトップへ。スクリーンリーダーが新規コンテンツを読み上げる。
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (mainRef.current) mainRef.current.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view]);
+
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
     body, html { background: ${C.page}; }
     input[type="range"] { accent-color: ${C.ink}; }
+
+    /* キーボードフォーカスを明示（マウス使用時は非表示） */
+    *:focus-visible {
+      outline: 2px solid ${C.blue};
+      outline-offset: 2px;
+    }
+    *:focus:not(:focus-visible) { outline: none; }
+
+    /* スキップリンク：Tab 一発で本文へ */
+    .skip-link {
+      position: absolute;
+      left: -9999px; top: -9999px;
+      background: ${C.ink}; color: ${C.paper};
+      padding: 0.6rem 1rem;
+      font-family: ${F_MONO};
+      font-size: 13px;
+      z-index: 100;
+    }
+    .skip-link:focus {
+      left: 1rem; top: 1rem;
+    }
+    main:focus { outline: none; }
   `;
   return (
     <div
@@ -3680,8 +3713,18 @@ export default function App() {
       }}
     >
       <style>{styles}</style>
+      <a href="#main" className="skip-link"
+        onClick={(e) => {
+          e.preventDefault();
+          mainRef.current?.focus();
+          window.scrollTo({ top: 0 });
+        }}>
+        本文へスキップ
+      </a>
       <Header view={view} setView={setView} />
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main id="main" ref={mainRef} tabIndex={-1}
+        className="max-w-5xl mx-auto px-6 py-10"
+        aria-live="polite">
         {view === 'home' && <HomeView go={setView} />}
         {view === 'intro' && <IntroView />}
         {view === 'lp' && <LPView />}

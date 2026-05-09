@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（スコープ外 1: 輸送ソルバー化 + ビルド設定）
+> 最終更新: 2026-05-09（スコープ外 2: アクセシビリティ強化）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -42,7 +42,8 @@
 | `cc9c5ea` | UI/UX 改善 2: ボタンラベル統一 / 採点トグル化 / Landscape 配色を中立化 |
 | `93cb4df` | UI/UX 改善 3: 多解性注釈 / 爆発初期 n=30 / ジャンプ順次表示 / 構造化解説 / コピーボタン |
 | `973196d` | UI/UX 改善 4: SVG aria-label / 倉庫ボタン 44pt / inkLight コントラスト改善 |
-| _次commit_ | スコープ外 1: 輸送LP の本物ソルバー化 + Vite/React/Tailwind ビルド設定 |
+| `16e8b45` | スコープ外 1: 輸送LP の本物ソルバー化 + Vite/React/Tailwind ビルド設定 |
+| _次commit_ | スコープ外 2: skip link / focus-visible / view 切替時の focus + scroll / aria-current |
 
 ## 4. 残 TODO
 
@@ -82,7 +83,7 @@
 - [x] Lesson 04 輸送のハードコード解消 → 整数格子点総当たりで動的計算
 - [x] ビルド設定（Vite + React + Tailwind 整備、`npm run dev` / `npm run build` で起動）
 - [ ] 多言語化（i18n インフラ + UI 文字列の英語化）
-- [ ] アクセシビリティ強化（フォーカス可視・skip link・focus 管理）
+- [x] アクセシビリティ強化（skip link / `:focus-visible` / view 切替時の focus 移動 + smooth scroll / `aria-current="page"` / `<main aria-live="polite">`）
 
 ## 6. 既知の課題 / 留意点
 
