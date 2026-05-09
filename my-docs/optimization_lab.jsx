@@ -402,8 +402,16 @@ const MODULES = [
     accent: C.blue,
   },
   {
-    id: 'toolchain',
+    id: 'modeling',
     no: '10',
+    title: '文章を式にする',
+    sub: 'モデリング演習 — 翻訳の練習',
+    blurb: 'ケーキ屋・配車・旅行プランの3問。文章中の語句を「変数 / 目的 / 制約」に分類して、最適化問題への翻訳スキルを身につける。',
+    accent: C.yellow,
+  },
+  {
+    id: 'toolchain',
+    no: '11',
     title: 'ソルバーとモデリング言語',
     sub: '実務への接続 — 道具の使い分け',
     blurb: '同じ問題を PuLP / JuMP / 生のLP標準形 で書き比べる。モデリング言語とソルバーの役割の違い、最初に選ぶべき組み合わせまで。',
@@ -2877,6 +2885,228 @@ function PortfolioView() {
 }
 
 
+// === MODELING EXERCISE MODULE =========================================
+
+const CAT_LABEL = { var: '変数', obj: '目的', cons: '制約' };
+
+const MODELING_PROBLEMS = [
+  {
+    id: 'cake',
+    title: 'ケーキ屋さん',
+    color: C.red,
+    body:
+      'ショートケーキは1個 300 円の利益、作るのに 15 分。\n' +
+      'モンブランは1個 500 円の利益、作るのに 25 分。\n' +
+      '営業時間は1日 8 時間まで（= 480 分）。\n' +
+      '利益を最大化したい。',
+    chips: [
+      { id: 'c1', text: 'ショートケーキを何個作るか',                        ans: 'var' },
+      { id: 'c2', text: 'モンブランを何個作るか',                            ans: 'var' },
+      { id: 'c3', text: '300×（ショート個数）＋ 500×（モンブラン個数）',     ans: 'obj' },
+      { id: 'c4', text: '15×（ショート）＋ 25×（モンブラン）≤ 480',          ans: 'cons' },
+      { id: 'c5', text: '個数 ≥ 0',                                          ans: 'cons' },
+    ],
+    explain:
+      '典型的な LP（線形計画）。「いくつ作るか」が変数、「合計利益」が目的、「時間と非負」が制約。' +
+      '個数を整数に縛ると IP（整数計画）。Lesson 01・03 と同じ骨格。',
+  },
+  {
+    id: 'taxi',
+    title: '配車の割当',
+    color: C.blue,
+    body:
+      '3台のタクシーと、3人の乗客がいる。\n' +
+      '各「タクシー × 乗客」の組み合わせで運賃が違う（迎車距離など）。\n' +
+      '1台のタクシーは1人しか乗せない。1人の乗客は1台にしか乗らない。\n' +
+      '総運賃が最大になる組み合わせを決めたい。',
+    chips: [
+      { id: 't1', text: 'タクシー i が乗客 j を乗せるか（0 / 1）', ans: 'var' },
+      { id: 't2', text: '総運賃の合計',                            ans: 'obj' },
+      { id: 't3', text: '各タクシーが乗せる乗客は 1 人まで',        ans: 'cons' },
+      { id: 't4', text: '各乗客は 1 台にだけ乗る',                  ans: 'cons' },
+      { id: 't5', text: '0 か 1 のどちらかしかとらない',            ans: 'cons' },
+    ],
+    explain:
+      '0/1 整数変数を使う「割当問題」。Lesson 04（輸送）の特殊形（容量・需要が 1）であり、' +
+      'MIP（混合整数計画）の典型例。シフト・マッチングなど応用は広い。',
+  },
+  {
+    id: 'travel',
+    title: '旅行プラン',
+    color: C.green,
+    body:
+      '京都旅行で観光スポット 6 箇所が候補。\n' +
+      '各スポットには「満足度」と「所要時間」がある。\n' +
+      '1日で動ける時間は 12 時間まで。\n' +
+      '合計満足度を最大化したい。',
+    chips: [
+      { id: 'r1', text: 'スポット i を訪れるか（0 / 1）', ans: 'var' },
+      { id: 'r2', text: '満足度の合計',                    ans: 'obj' },
+      { id: 'r3', text: '所要時間の合計が 12 時間以内',    ans: 'cons' },
+      { id: 'r4', text: '0 か 1 のどちらかしかとらない',   ans: 'cons' },
+    ],
+    explain:
+      '0/1 ナップサック（Lesson 03 そのもの）。旅行・予算配分・特集記事の選定など、' +
+      '「枠の中で何を選ぶか」という形は驚くほど多くの場面に現れる。',
+  },
+];
+
+function ModelingView() {
+  const [pi, setPi] = useState(0);
+  const [placement, setPlacement] = useState({});
+  const [graded, setGraded] = useState(false);
+  const problem = MODELING_PROBLEMS[pi];
+
+  const switchProblem = (i) => {
+    setPi(i);
+    setPlacement({});
+    setGraded(false);
+  };
+
+  const setCat = (chipId, cat) => {
+    setPlacement((p) => ({ ...p, [chipId]: cat }));
+    setGraded(false);
+  };
+
+  const allAssigned = problem.chips.every((c) => placement[c.id]);
+  const correctCount = problem.chips.filter((c) => placement[c.id] === c.ans).length;
+  const allCorrect = graded && correctCount === problem.chips.length;
+
+  return (
+    <div>
+      <ModuleHeader kicker="LESSON 10" title="文章を式にする" subtitle="MODELING EXERCISE" accent={C.yellow} />
+
+      <Story>
+        最適化の本当のスキルは「<b>文章で書かれた問題を、3点セットに翻訳する</b>」こと。<br />
+        ソルバーは式さえ受け取れば解いてくれる。<br />
+        3つのケースで、どこが <b>変数・目的・制約</b> なのかを仕分けしてみよう。
+      </Story>
+
+      <Card accent={C.yellow}>
+        <div className="flex gap-1 mb-4 flex-wrap">
+          {MODELING_PROBLEMS.map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => switchProblem(i)}
+              style={{
+                background: pi === i ? p.color : 'transparent',
+                color: pi === i ? C.paper : C.ink,
+                border: `1.5px solid ${p.color}`,
+                padding: '0.4rem 0.9rem',
+                fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.05em',
+                cursor: 'pointer',
+              }}
+            >
+              Q{i + 1}　{p.title}
+            </button>
+          ))}
+        </div>
+
+        <NotePaper style={{ marginBottom: '1.2rem' }}>
+          <div style={{ fontFamily: F_DISP, fontSize: 14.5, color: C.inkSoft, lineHeight: 2.1, whiteSpace: 'pre-line' }}>
+            {problem.body}
+          </div>
+        </NotePaper>
+
+        <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 8 }}>
+          ↓ 各語句を 変数 / 目的 / 制約 のどれかに分類する
+        </div>
+
+        <div className="space-y-2">
+          {problem.chips.map((chip) => {
+            const sel = placement[chip.id];
+            const isCorrect = graded && sel === chip.ans;
+            const isWrong = graded && sel !== chip.ans;
+            return (
+              <div key={chip.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                background: isCorrect ? C.greenLight : isWrong ? C.redLight : C.paperLight,
+                border: `1.5px solid ${isCorrect ? C.green : isWrong ? C.red : C.rule}`,
+                padding: '0.6rem 0.85rem',
+              }}>
+                <span style={{ fontFamily: F_DISP, fontSize: 14, color: C.inkSoft, flex: '1 1 55%' }}>
+                  {chip.text}
+                  {isWrong && (
+                    <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.red, marginLeft: 8 }}>
+                      → 正解: {CAT_LABEL[chip.ans]}
+                    </span>
+                  )}
+                </span>
+                <div className="flex gap-1">
+                  {[
+                    { id: 'var',  label: '変数', color: C.red },
+                    { id: 'obj',  label: '目的', color: C.blue },
+                    { id: 'cons', label: '制約', color: C.yellow },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setCat(chip.id, cat.id)}
+                      disabled={graded}
+                      style={{
+                        background: sel === cat.id ? cat.color : 'transparent',
+                        color: sel === cat.id ? C.paper : cat.color,
+                        border: `1.5px solid ${cat.color}`,
+                        padding: '0.3rem 0.65rem',
+                        fontFamily: F_MONO, fontSize: 11, letterSpacing: '0.05em',
+                        cursor: graded ? 'not-allowed' : 'pointer',
+                        opacity: graded ? 0.7 : 1,
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 mt-4 flex-wrap items-center">
+          <Btn variant="ghost" size="sm" onClick={() => { setPlacement({}); setGraded(false); }}>
+            やり直し
+          </Btn>
+          <Btn variant="primary" size="sm" onClick={() => allAssigned && setGraded(true)}>
+            {graded ? `${correctCount} / ${problem.chips.length} 正解` : '採点する'}
+          </Btn>
+          {!allAssigned && !graded && (
+            <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>
+              全ての語句を分類すると採点できる
+            </span>
+          )}
+          {allCorrect && (
+            <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.green, fontWeight: 600 }}>
+              ✓ 全問正解
+            </span>
+          )}
+        </div>
+
+        {graded && (
+          <div style={{
+            background: C.paperDark, border: `1px dashed ${C.gridDark}`,
+            padding: '0.9rem 1rem', marginTop: '1rem',
+          }}>
+            <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.15em', marginBottom: 6 }}>
+              EXPLANATION
+            </div>
+            <div style={{ fontFamily: F_BODY, fontSize: 13, color: C.inkSoft, lineHeight: 1.9 }}>
+              {problem.explain}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <SectionTitle num="10.1">これができれば、あとはソルバーが解く</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
+          ここまでできれば、次の <b>Lesson 11</b> で紹介する道具（PuLP / JuMP / AMPL ＋ ソルバー）に渡すだけで解ける。
+          実務における最適化の仕事の <b>大半はこの翻訳パート</b>。
+          ソルバーを書くのではなく、問題を式に翻訳する人こそが価値を出す。
+        </p>
+      </Card>
+    </div>
+  );
+}
+
 // === TOOLCHAIN MODULE =================================================
 
 const TOOLCHAIN_CODE = {
@@ -2938,7 +3168,7 @@ function ToolchainView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 10" title="ソルバーとモデリング言語" subtitle="SOLVER & MODELING LANGUAGE" accent={C.green} />
+      <ModuleHeader kicker="LESSON 11" title="ソルバーとモデリング言語" subtitle="SOLVER & MODELING LANGUAGE" accent={C.green} />
 
       <Story>
         ここまで全部、ブラウザ内の手作りロジック（全列挙・貪欲）で解いてきた。<br />
@@ -2984,7 +3214,7 @@ function ToolchainView() {
         </div>
       </Card>
 
-      <SectionTitle num="10.1">同じ問題を、3つの書き方で</SectionTitle>
+      <SectionTitle num="11.1">同じ問題を、3つの書き方で</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginBottom: 12 }}>
           題材は <b>Lesson 01 のお菓子LP</b>（砂糖・レモンの上限のもと利益最大化）。
@@ -3030,7 +3260,7 @@ function ToolchainView() {
         </p>
       </Card>
 
-      <SectionTitle num="10.2">解くまでの流れ</SectionTitle>
+      <SectionTitle num="11.2">解くまでの流れ</SectionTitle>
       <Card>
         <Blackboard label="PIPELINE / SOLVE FLOW">
           <svg viewBox="0 0 720 200" style={{ width: '100%', height: 'auto', display: 'block' }}>
@@ -3075,7 +3305,7 @@ function ToolchainView() {
         </Blackboard>
       </Card>
 
-      <SectionTitle num="10.3">最初に何を選ぶ？</SectionTitle>
+      <SectionTitle num="11.3">最初に何を選ぶ？</SectionTitle>
       <Card>
         <NotePaper>
           <div style={{ fontFamily: F_DISP, fontSize: '1rem', color: C.inkSoft, lineHeight: 2 }}>
@@ -3131,7 +3361,8 @@ function Header({ view, setView }) {
     { id: 'setcover', label: '07 集合被覆' },
     { id: 'facility', label: '08 施設配置' },
     { id: 'portfolio', label: '09 ポートフォリオ' },
-    { id: 'toolchain', label: '10 道具' },
+    { id: 'modeling', label: '10 モデリング' },
+    { id: 'toolchain', label: '11 道具' },
   ];
   return (
     <header
@@ -3206,6 +3437,7 @@ export default function App() {
         {view === 'setcover' && <SetCoverView />}
         {view === 'facility' && <FacilityView />}
         {view === 'portfolio' && <PortfolioView />}
+        {view === 'modeling' && <ModelingView />}
         {view === 'toolchain' && <ToolchainView />}
       </main>
       <footer
