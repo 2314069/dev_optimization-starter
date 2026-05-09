@@ -1913,8 +1913,8 @@ function LandscapeView() {
               const isStart = i === 0;
               const isEnd = i === greedyPath.length - 1;
               const r = isStart ? 5 : isEnd ? 7 : 2;
-              const fill = isEnd ? (isStuck ? C.chalkPink : C.chalkGreen) : C.chalkPink;
-              const op = isStart || isEnd ? 1 : 0.35 + 0.5 * (i / greedyPath.length);
+              const fill = isEnd ? (isStuck ? C.chalkPink : C.chalkGreen) : C.chalk;
+              const op = isStart || isEnd ? 1 : 0.4 + 0.5 * (i / greedyPath.length);
               return (
                 <circle key={`gp${i}`} cx={sx(x)} cy={sy(landscape(x))} r={r}
                   fill={fill} opacity={op} stroke={isEnd ? C.board : 'none'} strokeWidth={1.5} />
@@ -1949,8 +1949,9 @@ function LandscapeView() {
                 {showJump ? 'ジャンプ探索を隠す' : 'ジャンプ探索を試す'}
               </Btn>
             </div>
-            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, marginTop: 8, lineHeight: 1.7 }}>
-              赤丸 = 貪欲法（傾きを下る）／ 黄✕ = 真の最小 ／ 青丸 = ジャンプ探索（8地点から）
+            <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkSoft, marginTop: 8, lineHeight: 1.7 }}>
+              ● 黒丸 = 貪欲法の軌跡（終点は到達点で <span style={{ color: C.green }}>緑＝成功</span> / <span style={{ color: C.red }}>赤＝局所に固着</span>）<br />
+              ● 青丸 = ジャンプ探索（8地点から並列）／ ✕ = 真の最小（黄）
             </div>
           </div>
 
@@ -2178,7 +2179,7 @@ function ShiftView() {
 
         <div className="flex flex-wrap gap-2 mt-5">
           <Btn variant="ghost" size="sm" onClick={() => setGrid(STAFF.map(() => DAYS.map(() => false)))}>
-            空にする
+            リセット
           </Btn>
           <Btn variant="soft" size="sm" onClick={() => setGrid(autoSolve())}>
             自動で組む
@@ -2648,7 +2649,7 @@ function FacilityView() {
               })}
             </div>
             <div className="flex gap-2 mt-4 flex-wrap">
-              <Btn variant="ghost" size="sm" onClick={() => { setOpen(new Set()); setReveal(false); }}>すべて閉鎖</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => { setOpen(new Set()); setReveal(false); }}>リセット</Btn>
               <Btn variant="soft" size="sm" onClick={() => { setOpen(new Set([0, 1, 2, 3])); setReveal(false); }}>すべて開設</Btn>
               <Btn variant="primary" size="sm" onClick={() => setReveal(!reveal)}>
                 {reveal ? '元に戻す' : '最適解を見る'}
@@ -3144,19 +3145,24 @@ function ModelingView() {
 
         <div className="flex gap-2 mt-4 flex-wrap items-center">
           <Btn variant="ghost" size="sm" onClick={() => { setPlacement({}); setGraded(false); }}>
-            やり直し
+            リセット
           </Btn>
-          <Btn variant="primary" size="sm" onClick={() => allAssigned && setGraded(true)}>
-            {graded ? `${correctCount} / ${problem.chips.length} 正解` : '採点する'}
+          <Btn variant="primary" size="sm" onClick={() => allAssigned && setGraded(!graded)}>
+            {graded ? '編集に戻る' : '採点する'}
           </Btn>
+          {graded && (
+            <span style={{ fontFamily: F_MONO, fontSize: 12, color: allCorrect ? C.green : C.inkSoft, fontWeight: 600 }}>
+              {correctCount} / {problem.chips.length} 正解
+            </span>
+          )}
           {!allAssigned && !graded && (
-            <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight }}>
+            <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkSoft }}>
               全ての語句を分類すると採点できる
             </span>
           )}
           {allCorrect && (
             <span style={{ fontFamily: F_MONO, fontSize: 11, color: C.green, fontWeight: 600 }}>
-              ✓ 全問正解
+              ✓ 全問正解！
             </span>
           )}
         </div>

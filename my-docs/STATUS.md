@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-09（UI/UX 改善 1: ナビゲーション・ホーム）
+> 最終更新: 2026-05-09（UI/UX 改善 2: 統一・色）
 > ブランチ: `claude/enable-optimization-engine-ng4lU`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -38,7 +38,8 @@
 | `0216d0e` | Add STATUS.md |
 | `14d6446` | Add Lesson 10 (modeling): chip-classification exercise（toolchain 10→11 へ繰り下げ） |
 | `ff9c8d7` | Add cross-lesson connector lines (Lesson 01 / 03 / 06) |
-| _次commit_ | UI/UX 改善 1: hero CTA / home grouping / mobile-friendly tabs / lesson prev-next nav |
+| `390e78d` | UI/UX 改善 1: hero CTA / home grouping / mobile-friendly tabs / lesson prev-next nav |
+| _次commit_ | UI/UX 改善 2: ボタンラベル統一 / 採点トグル化 / Landscape 配色を中立化 |
 
 ## 4. 残 TODO
 
@@ -58,9 +59,9 @@
 - [x] #2 レッスン末尾に前後ナビ（`LessonNav`）
 - [x] #3 ホームのカードを STEP 1〜4 にグループ化
 - [x] ヒーロー直下に「初めての人はここから → Lesson 00」CTA
-- [ ] #4 ボタンラベル統一（リセット / やり直し）
-- [ ] #5 ModelingView 採点トグル化
-- [ ] #6 Landscape 配色を 3要素色から外す
+- [x] #4 ボタンラベル統一（やり直し / 空にする / すべて閉鎖 → リセット）
+- [x] #5 ModelingView 採点トグル化（編集に戻る／採点する）
+- [x] #6 Landscape 配色を 3要素色から外す（貪欲の軌跡を chalk 黒に）
 - [ ] #7 IntroView：多解性の注釈
 - [ ] #8 ExplosionView：初期 n=30
 - [ ] #9 LandscapeView：ジャンプ探索のシーケンシャル表示
