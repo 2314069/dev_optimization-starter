@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-16（付録：開発環境セットアップタブを追加）
+> 最終更新: 2026-05-17（付録タブを push 済み・次は Vercel 初回デプロイ）
 > ブランチ: `main`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -47,7 +47,7 @@
 | `222cf06` | スコープ外 2: skip link / focus-visible / view 切替時の focus + scroll / aria-current |
 | `56c2fb3` | スコープ外 3: i18n インフラ（LangContext/I18N/useT）+ ヘッダー・ホーム・フッターを EN 化 |
 | `ce4c511` | i18n: Lesson 00 本文を `t()` 化（Story / Card / SectionTitle / NotePaper / SVG ラベル / dish 名） |
-| _次commit_ | 付録：開発環境セットアップタブを追加（Python + Colab、ja/en 両対応、Lesson 番号体系外） |
+| `28ba3cb` | 付録：開発環境セットアップタブを追加（Python + Colab、ja/en 両対応、Lesson 番号体系外） |
 
 ## 4. 残 TODO
 
@@ -100,7 +100,20 @@
 - 既存テーマトークン: `C` / `F_DISP` / `F_MONO` / `F_BODY`
 - 既存共通部品: `Card`, `Btn`, `Slider`, `Equation`, `Blackboard`, `NotePaper`, `ModuleHeader`, `Story`, `SectionTitle`, `Tag`, `StatusBox`
 
-## 7. 更新ルール
+## 7. 次回作業
+
+### 7.1 公開（Vercel デプロイ）
+
+- [ ] **Vercel での初回デプロイ** — `vercel.com/new` → GitHub の `2314069/dev_optimization-starter` を Import → Vite 自動検出を確認 → Deploy。`vercel.json` は不要（standard Vite 検出で動く）。発行 URL は `https://dev-optimization-starter.vercel.app/` 系の見込み
+  - 前提：リポジトリは PUBLIC・main の HEAD は `28ba3cb`（付録タブ込み）で公開準備済み
+  - 注意：`vite.config.js` に `base` 設定は無い → Vercel ではこのままで OK（GitHub Pages に切り替える場合のみ `base: '/dev_optimization-starter/'` が必要）
+  - デプロイ後に `index.html` の `<title>` / favicon を整える余地あり（任意）
+
+### 7.2 残コンテンツ作業（再開時の参照）
+
+- [ ] Lesson 01〜11 の Story 散文・SectionTitle 本文・Card 内プロース解説・SVG 凡例日本語ラベルを順次 `t()` 化（Lesson 00 と同じパターン）
+
+## 8. 更新ルール
 
 このファイルは **コミットを切るたびに更新する**：
 
