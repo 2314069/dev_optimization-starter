@@ -22,6 +22,7 @@ const I18N = {
     'nav.portfolio':      'ポートフォリオ',
     'nav.modeling':       'モデリング',
     'nav.toolchain':      '道具',
+    'nav.setup':          'セットアップ',
     'home.kicker':        'OPTIMIZATION LAB · 2026',
     'home.title.line1':   '数理最適化',
     'home.title.line2':   'スターター',
@@ -85,6 +86,38 @@ const I18N = {
     'intro.s2.write':      ' の順に書き出して、コンピュータに渡す。次のレッスンからは、この3つを実際に ',
     'intro.s2.bold.form':  '数式',
     'intro.s2.tail':       ' に翻訳していく。',
+    // === Setup (Appendix) =====
+    'setup.kicker':           '付録',
+    'setup.title':            '手元で動かす',
+    'setup.subtitle':         'PYTHON + COLAB SETUP',
+    'setup.story.line1':      'ここまで全部、ブラウザの中だけで触ってきた。',
+    'setup.story.line2':      '次は、自分の Python で同じ問題を解いてみよう。',
+    'setup.story.line3':      '一番ラクなのは Google Colab。何もインストールせずに、ブラウザだけで始められる。',
+    'setup.s1.title':         'まずは Colab で動かす',
+    'setup.s1.body':          'Colab は、ブラウザの中で Python が動く Google のサービス。インストール作業はゼロ。Gmail のアカウントさえあれば、もう準備は終わっている。',
+    'setup.s1.steps.title':   '手順',
+    'setup.s1.step1':         'colab.research.google.com を開いて、Google でログインする',
+    'setup.s1.step2':         '「ファイル」→「ノートブックを新規作成」を選ぶ',
+    'setup.s1.step3':         '下のコードをまるごとセルに貼って、Shift + Enter',
+    'setup.s1.step4':         'セルの下に xA, xB, profit が出てきたら成功',
+    'setup.s1.note':          'お題は Lesson 01（工場の社長）とそっくり同じ LP。最適解は xA=10, xB=20, profit=3200 になるはず。スライダーで遊んでいた結果が、Python でも同じ数字で出てくる。',
+    'setup.s2.title':         '次は手元の PC にも入れておく',
+    'setup.s2.body':          'Colab に慣れてきたら、手元のマシンにも Python を入れておくと自由度が一気に上がる。公式インストーラと pip があれば、もう動く。エディタは VS Code を選んでおけばだいたい外さない。',
+    'setup.s3.title':         'つまずいたら',
+    'setup.s3.tip1.label':    'pip が見つからない',
+    'setup.s3.tip1.body':     'たいてい、インストールのときに「Add Python to PATH」を入れ忘れている。入れ直すか、面倒なら `python -m pip` で代用できる。',
+    'setup.s3.tip2.label':    'pulp が import できない',
+    'setup.s3.tip2.body':     'pip と python が別物を指している、よくあるやつ。`python -m pip install pulp` で、いま動いている python と同じ場所に入れ直すと直る。',
+    'setup.s3.tip3.label':    'solver not found',
+    'setup.s3.tip3.body':     'PuLP には CBC ソルバーが付いてくるので、普通は出ないエラー。Colab ならランタイム再起動、ローカルなら pulp をいったん消して入れ直すと、大体すぐ動く。',
+    'setup.s4.title':         'ここから先',
+    'setup.s4.body':          'PuLP の書き方が体に入ってきたら、Lesson 11 で並んでいた JuMP（Julia）や AMPL、商用ソルバー（Gurobi / CPLEX）もそのまま射程に入る。表面の文法は違うけど、「変数・目的・制約」の3点セットはどこに行っても変わらない。',
+    'setup.s4.backLink':      '→ Lesson 11 に戻る（道具を見比べる）',
+    'setup.tab.colab':        'Colab セル',
+    'setup.tab.local':        'ローカル端末',
+    'setup.copy':             'コピー',
+    'setup.copied':           '✓ コピー済',
+    'setup.copy.aria':        'コードをコピー',
   },
   en: {
     'app.skip':           'Skip to main content',
@@ -103,6 +136,7 @@ const I18N = {
     'nav.portfolio':      'Portfolio',
     'nav.modeling':       'Modeling',
     'nav.toolchain':      'Toolchain',
+    'nav.setup':          'Setup',
     'home.kicker':        'OPTIMIZATION LAB · 2026',
     'home.title.line1':   'Mathematical',
     'home.title.line2':   'Optimization Starter',
@@ -166,6 +200,38 @@ const I18N = {
     'intro.s2.write':      ' — write them in this order and hand them to the computer. From the next lesson on, we translate the three into actual ',
     'intro.s2.bold.form':  'formulas',
     'intro.s2.tail':       '.',
+    // === Setup (Appendix) =====
+    'setup.kicker':           'APPENDIX',
+    'setup.title':            'Run It On Your Machine',
+    'setup.subtitle':         'PYTHON + COLAB SETUP',
+    'setup.story.line1':      "So far everything has lived inside this browser.",
+    'setup.story.line2':      "Time to solve the same problem with your own Python.",
+    'setup.story.line3':      "The shortest path is Google Colab. Nothing to install, just open a tab.",
+    'setup.s1.title':         "Start with Colab",
+    'setup.s1.body':          "Colab is Google's in-browser Python. No install, no setup. If you have a Gmail account, you're already done with the prep.",
+    'setup.s1.steps.title':   'Steps',
+    'setup.s1.step1':         "Open colab.research.google.com and sign in with Google",
+    'setup.s1.step2':         "File → New notebook",
+    'setup.s1.step3':         "Paste the code below into a cell, hit Shift + Enter",
+    'setup.s1.step4':         "If xA, xB, and profit show up under the cell, you're in.",
+    'setup.s1.note':          "Same LP as Lesson 01 (the factory). The answer should land on xA=10, xB=20, profit=3200, the same numbers you saw moving the sliders.",
+    'setup.s2.title':         "Then put it on your own machine",
+    'setup.s2.body':          "Once Colab feels familiar, getting Python onto your own laptop unlocks a lot more. The official installer plus pip will take you the whole way. VS Code is a safe pick for an editor.",
+    'setup.s3.title':         'If You Get Stuck',
+    'setup.s3.tip1.label':    'pip not found',
+    'setup.s3.tip1.body':     "Almost always 'Add Python to PATH' was unchecked during install. Reinstall with that on, or just use `python -m pip` instead.",
+    'setup.s3.tip2.label':    "Can't import pulp",
+    'setup.s3.tip2.body':     "Classic case of pip and python pointing at different installs. `python -m pip install pulp` drops it where the python you're running will actually find it.",
+    'setup.s3.tip3.label':    'Solver not found',
+    'setup.s3.tip3.body':     "PuLP ships with the CBC solver, so this one shouldn't really happen. In Colab a runtime restart fixes it; locally, uninstalling and reinstalling pulp usually does the trick.",
+    'setup.s4.title':         "From here",
+    'setup.s4.body':          "Once PuLP starts feeling natural, the JuMP (Julia), AMPL, and commercial solvers (Gurobi / CPLEX) lined up in Lesson 11 are all in reach. The surface syntax shifts around, but the variable / objective / constraint trio stays the same wherever you go.",
+    'setup.s4.backLink':      '→ Back to Lesson 11 (compare the tools)',
+    'setup.tab.colab':        'Colab cell',
+    'setup.tab.local':        'Local terminal',
+    'setup.copy':             'Copy',
+    'setup.copied':           '✓ Copied',
+    'setup.copy.aria':        'Copy code',
   },
 };
 
@@ -3705,6 +3771,191 @@ function ToolchainView() {
   );
 }
 
+// === SETUP MODULE (appendix) =========================================
+
+const SETUP_CODE = {
+  colab: {
+    file: 'colab_cell.ipynb',
+    code: `# 1) PuLP をインストール（Colab セル）
+!pip install pulp
+
+# 2) Lesson 01 と同じ LP（レモネード工場）を解く
+from pulp import LpProblem, LpMaximize, LpVariable, value
+
+m  = LpProblem("lemonade", LpMaximize)
+xA = LpVariable("xA", lowBound=0)   # レモネード A の杯数
+xB = LpVariable("xB", lowBound=0)   # レモネード B の杯数
+
+m += 120 * xA + 100 * xB              # 目的：利益最大化
+m += 2 * xA + 1 * xB <= 40            # 砂糖の上限
+m += 1 * xA + 2 * xB <= 50            # レモンの上限
+
+m.solve()
+print(f"xA = {value(xA)},  xB = {value(xB)},  profit = {value(m.objective)}")
+# => xA = 10.0, xB = 20.0, profit = 3200.0`,
+  },
+  local: {
+    file: 'terminal',
+    code: `# 1) Python を入れる（公式: https://www.python.org/downloads/）
+python --version            # 3.10 以上が望ましい
+
+# 2) プロジェクト用フォルダを作る
+mkdir my-opt
+cd my-opt
+
+# 3) PuLP を入れる
+pip install pulp
+
+# 4) 上の Colab セルのコードを solve.py として保存して実行
+python solve.py`,
+  },
+};
+
+function SetupView({ setView }) {
+  const { t } = useContext(LangContext);
+  const [tab, setTab] = useState('colab');
+  const [copied, setCopied] = useState(false);
+  const code = SETUP_CODE[tab];
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <div>
+      <ModuleHeader kicker={t('setup.kicker')} title={t('setup.title')} subtitle={t('setup.subtitle')} accent={C.blue} />
+
+      <Story>
+        {t('setup.story.line1')}<br />
+        {t('setup.story.line2')}<br />
+        {t('setup.story.line3')}
+      </Story>
+
+      <SectionTitle num="1">{t('setup.s1.title')}</SectionTitle>
+      <Card accent={C.blue}>
+        <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginBottom: 14 }}>
+          {t('setup.s1.body')}
+        </p>
+
+        <div style={{ background: C.paperDark, border: `2px dashed ${C.gridDark}`, padding: '0.9rem 1.1rem', marginBottom: 16 }}>
+          <div style={{ fontFamily: F_MONO, fontSize: 10, color: C.inkLight, letterSpacing: '0.1em', marginBottom: 6 }}>
+            {t('setup.s1.steps.title')}
+          </div>
+          <ol style={{ fontFamily: F_DISP, fontSize: '0.98rem', color: C.ink, lineHeight: 1.9, paddingLeft: '1.4em', margin: 0 }}>
+            <li>{t('setup.s1.step1')}</li>
+            <li>{t('setup.s1.step2')}</li>
+            <li>{t('setup.s1.step3')}</li>
+            <li>{t('setup.s1.step4')}</li>
+          </ol>
+        </div>
+
+        <div className="flex gap-1 mb-3 flex-wrap">
+          {Object.entries(SETUP_CODE).map(([id]) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              style={{
+                background: tab === id ? C.ink : 'transparent',
+                color: tab === id ? C.paper : C.ink,
+                border: `1.5px solid ${C.ink}`,
+                padding: '0.4rem 0.9rem',
+                fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.05em',
+                cursor: 'pointer',
+              }}
+            >
+              {t(`setup.tab.${id}`)}
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          position: 'relative',
+          background: '#1f1f1f', color: '#e6e6e6',
+          padding: '0.9rem 1.1rem 1rem',
+          fontFamily: F_MONO, fontSize: 12.5, lineHeight: 1.65,
+          overflow: 'auto', borderRadius: 2,
+          boxShadow: `2px 3px 0 ${C.pageEdge}`,
+        }}>
+          <div className="flex justify-between items-center" style={{ marginBottom: 8 }}>
+            <div style={{ color: '#9aa0a6', fontSize: 10, letterSpacing: '0.1em', fontFamily: F_MONO }}>
+              $ {code.file}
+            </div>
+            <button
+              onClick={copyCode}
+              aria-label={t('setup.copy.aria')}
+              style={{
+                background: copied ? '#2a8543' : 'transparent',
+                color: copied ? '#ffffff' : '#9aa0a6',
+                border: `1px solid ${copied ? '#2a8543' : '#4a4a4a'}`,
+                padding: '0.2rem 0.6rem',
+                fontFamily: F_MONO, fontSize: 10, letterSpacing: '0.05em',
+                cursor: 'pointer',
+                borderRadius: 2,
+              }}
+            >
+              {copied ? t('setup.copied') : t('setup.copy')}
+            </button>
+          </div>
+          <pre style={{ margin: 0, whiteSpace: 'pre' }}>{code.code}</pre>
+        </div>
+
+        <p style={{ fontFamily: F_BODY, fontSize: 12.5, color: C.inkLight, lineHeight: 1.8, marginTop: 14 }}>
+          {t('setup.s1.note')}
+        </p>
+      </Card>
+
+      <SectionTitle num="2">{t('setup.s2.title')}</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85 }}>
+          {t('setup.s2.body')}
+        </p>
+      </Card>
+
+      <SectionTitle num="3">{t('setup.s3.title')}</SectionTitle>
+      <Card>
+        <NotePaper>
+          <div style={{ fontFamily: F_DISP, fontSize: '1rem', color: C.inkSoft, lineHeight: 2 }}>
+            <b style={{ color: C.red }}>● {t('setup.s3.tip1.label')}</b><br />
+            <span style={{ paddingLeft: '1.2em', display: 'inline-block' }}>{t('setup.s3.tip1.body')}</span><br />
+            <br />
+            <b style={{ color: C.red }}>● {t('setup.s3.tip2.label')}</b><br />
+            <span style={{ paddingLeft: '1.2em', display: 'inline-block' }}>{t('setup.s3.tip2.body')}</span><br />
+            <br />
+            <b style={{ color: C.red }}>● {t('setup.s3.tip3.label')}</b><br />
+            <span style={{ paddingLeft: '1.2em', display: 'inline-block' }}>{t('setup.s3.tip3.body')}</span>
+          </div>
+        </NotePaper>
+      </Card>
+
+      <SectionTitle num="4">{t('setup.s4.title')}</SectionTitle>
+      <Card>
+        <p style={{ fontFamily: F_BODY, fontSize: 13.5, color: C.inkSoft, lineHeight: 1.85, marginBottom: 14 }}>
+          {t('setup.s4.body')}
+        </p>
+        <button
+          onClick={() => setView && setView('toolchain')}
+          style={{
+            background: 'transparent',
+            border: `1.5px solid ${C.blue}`,
+            color: C.blue,
+            padding: '0.55rem 1rem',
+            fontFamily: F_MONO, fontSize: 12, letterSpacing: '0.05em',
+            cursor: 'pointer',
+          }}
+        >
+          {t('setup.s4.backLink')}
+        </button>
+      </Card>
+    </div>
+  );
+}
+
 // === STATUS BOX (shared) ==============================================
 
 function StatusBox({ label, value, unit, bad, warn }) {
@@ -3738,6 +3989,7 @@ function Header({ view, setView }) {
     { id: 'portfolio', no: '09', key: 'nav.portfolio' },
     { id: 'modeling',  no: '10', key: 'nav.modeling' },
     { id: 'toolchain', no: '11', key: 'nav.toolchain' },
+    { id: 'setup',     no: '',   key: 'nav.setup' },
   ];
   return (
     <header
@@ -3935,6 +4187,7 @@ export default function App() {
           {view === 'portfolio' && <PortfolioView />}
           {view === 'modeling' && <ModelingView />}
           {view === 'toolchain' && <ToolchainView />}
+          {view === 'setup' && <SetupView setView={setView} />}
           {view !== 'home' && <LessonNav view={view} setView={setView} />}
         </main>
         <footer

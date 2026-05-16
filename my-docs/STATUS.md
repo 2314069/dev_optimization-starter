@@ -1,6 +1,6 @@
 # STATUS — 初心者向けコンテンツ追加プロジェクト
 
-> 最終更新: 2026-05-10（i18n: Lesson 00 本文を英訳）
+> 最終更新: 2026-05-16（付録：開発環境セットアップタブを追加）
 > ブランチ: `main`
 > 仕様書: [`SPEC_beginner_content.md`](./SPEC_beginner_content.md)
 
@@ -25,6 +25,7 @@
 | 09 | `portfolio` | 資産を運用する           | 既存 |
 | 10 | `modeling`  | 文章を式にする           | ✅ 追加済み |
 | 11 | `toolchain` | ソルバーとモデリング言語 | ✅ 追加済み |
+| 付録 | `setup`    | 手元で動かす（Python + Colab） | ✅ 追加済み |
 
 ## 3. コミット履歴（このプロジェクト分）
 
@@ -45,7 +46,8 @@
 | `16e8b45` | スコープ外 1: 輸送LP の本物ソルバー化 + Vite/React/Tailwind ビルド設定 |
 | `222cf06` | スコープ外 2: skip link / focus-visible / view 切替時の focus + scroll / aria-current |
 | `56c2fb3` | スコープ外 3: i18n インフラ（LangContext/I18N/useT）+ ヘッダー・ホーム・フッターを EN 化 |
-| _次commit_ | i18n: Lesson 00 本文を `t()` 化（Story / Card / SectionTitle / NotePaper / SVG ラベル / dish 名） |
+| `ce4c511` | i18n: Lesson 00 本文を `t()` 化（Story / Card / SectionTitle / NotePaper / SVG ラベル / dish 名） |
+| _次commit_ | 付録：開発環境セットアップタブを追加（Python + Colab、ja/en 両対応、Lesson 番号体系外） |
 
 ## 4. 残 TODO
 
@@ -85,6 +87,7 @@
 
 - [x] Lesson 04 輸送のハードコード解消 → 整数格子点総当たりで動的計算
 - [x] ビルド設定（Vite + React + Tailwind 整備、`npm run dev` / `npm run build` で起動）
+- [x] 初心者向け開発環境セットアップ付録タブ — Python + Colab に絞り、Lesson 番号体系外の独立タブとして追加（`SetupView`、ja/en 完全対応、Colab セル / ローカル端末の2タブ式コードサンプル + コピーボタン、Lesson 11 への戻り動線）
 - [x] 多言語化 — **インフラ + UI シェル + Lesson 00**（`LangContext` + `I18N{ja,en}` + `useT()` + ヘッダー言語切替）。翻訳済み: スキップリンク・フッター・ヘッダータブ全 13・ホームのヒーロー / CTA / STEP 1〜4 ラベル / ESSENCE / レッスン前後ナビ / **Lesson 00 全文（Story・SectionTitle・NotePaper・Card・SVG ラベル・お弁当のおかず名・単位（分/点/個））**
   - **未翻訳（次フェーズ）**: Lesson 01〜11 の Story 散文・SectionTitle 本文・Card 内のプロース解説・SVG 凡例日本語ラベル。Lesson 00 と同じパターン（`useContext(LangContext)` で `lang` と `t` を取り、`I18N` に `<lesson>.*` プレフィクスでキー追加）で順次置換可能
 - [x] アクセシビリティ強化（skip link / `:focus-visible` / view 切替時の focus 移動 + smooth scroll / `aria-current="page"` / `<main aria-live="polite">`）
