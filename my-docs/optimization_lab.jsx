@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useContext, createContext } from 'react';
 
 // === i18n =============================================================
-// UI シェル（ヘッダー・ホーム・共通ボタン・フッター）のみ翻訳。
-// レッスン本文（Story / SectionTitle / Card 内のプロース）は日本語のまま。
+// UI シェル + Lesson 00 まで翻訳済み。
+// 残レッスンの Story / SectionTitle / Card 内プロースは順次 t() 化していく。
 // 拡張時は I18N に同じ key の翻訳を追加するだけ。
 const I18N = {
   ja: {
@@ -38,6 +38,53 @@ const I18N = {
     'home.step4.tag':     '— 翻訳と道具の橋渡し',
     'lessonNav.prev':     '← PREV',
     'lessonNav.next':     'NEXT →',
+    // === Lesson 00 (Intro) =====
+    'intro.title':         '最適化って何？',
+    'intro.story.line1':   '朝の20分で、お弁当を作る。',
+    'intro.story.line2':   'おかずは4種類。それぞれ作るのにかかる時間と、おいしさ（満足度）が違う。',
+    'intro.story.line3':   '時間内におさめながら、満足度がいちばん高くなる組み合わせを探そう。',
+    'intro.blackboard':    'LUNCH BOX / お弁当箱',
+    'intro.svg.label':     'お弁当箱：4つの仕切りに各おかずを個数分タイルで並べた図',
+    'intro.dish.0':        '卵焼き',
+    'intro.dish.1':        'からあげ',
+    'intro.dish.2':        'ブロッコリー',
+    'intro.dish.3':        'ごはん詰め',
+    'intro.unit.min':      '分',
+    'intro.unit.point':    '点',
+    'intro.unit.piece':    ' 個',
+    'intro.label.qty':     '各おかずの個数を決める',
+    'intro.btn.reset':     'リセット',
+    'intro.btn.revert':    '元に戻す',
+    'intro.btn.showOpt':   '最適解を見る',
+    'intro.label.optJoy':  'OPTIMAL JOY',
+    'intro.label.yourJoy': 'YOUR JOY',
+    'intro.label.usedTime':'使った時間',
+    'intro.status.over':   '✗ オーバー',
+    'intro.status.exact':  '✓ ぴったり',
+    'intro.label.optimal': '最適',
+    'intro.note.tieBreak.pre':  '※ 同じ ',
+    'intro.note.tieBreak.post': ' 点を出す組み合わせは他にもある',
+    'intro.section1.title':'いま、何をやった？',
+    'intro.note.lead':     'スライダーを動かすだけで、3つのことをやっていた。',
+    'intro.q1.tag':        '1. 何を決めた？',
+    'intro.q1.body':       '4種類のおかずを「いくつ作るか」。',
+    'intro.q1.thisIs':     'これが ',
+    'intro.q1.term':       '決定変数',
+    'intro.q2.tag':        '2. 何を最大にした？',
+    'intro.q2.body':       '満足度の合計。',
+    'intro.q2.thisIs':     'これが ',
+    'intro.q2.term':       '目的関数',
+    'intro.q3.tag':        '3. 何を守った？',
+    'intro.q3.body':       '「20分以内」と「各おかずの上限個数」。',
+    'intro.q3.thisIs':     'これが ',
+    'intro.q3.term':       '制約条件',
+    'intro.punct.period':  '。',
+    'intro.section2.title':'最適化の仕事は、この3つを式にすること',
+    'intro.s2.lead':       '世の中の「うまく決めたい」という仕事は、たいていこの3点セットで書ける。',
+    'intro.s2.bold.flow':  '変数 → 目的 → 制約',
+    'intro.s2.write':      ' の順に書き出して、コンピュータに渡す。次のレッスンからは、この3つを実際に ',
+    'intro.s2.bold.form':  '数式',
+    'intro.s2.tail':       ' に翻訳していく。',
   },
   en: {
     'app.skip':           'Skip to main content',
@@ -72,6 +119,53 @@ const I18N = {
     'home.step4.tag':     '— translation skills and real tools',
     'lessonNav.prev':     '← PREV',
     'lessonNav.next':     'NEXT →',
+    // === Lesson 00 (Intro) =====
+    'intro.title':         'What is optimization?',
+    'intro.story.line1':   "You've got 20 minutes to pack a bento before heading out.",
+    'intro.story.line2':   'There are 4 dishes — each takes a different time to make and gives different satisfaction.',
+    'intro.story.line3':   'Stay within the time budget and find the combination with the highest satisfaction.',
+    'intro.blackboard':    'LUNCH BOX',
+    'intro.svg.label':     'Lunch box: tiles in 4 compartments showing the count of each dish.',
+    'intro.dish.0':        'Tamago',
+    'intro.dish.1':        'Karaage',
+    'intro.dish.2':        'Broccoli',
+    'intro.dish.3':        'Rice ball',
+    'intro.unit.min':      'min',
+    'intro.unit.point':    'pt',
+    'intro.unit.piece':    '',
+    'intro.label.qty':     'Set the count for each dish',
+    'intro.btn.reset':     'Reset',
+    'intro.btn.revert':    'Revert',
+    'intro.btn.showOpt':   'Show optimal',
+    'intro.label.optJoy':  'OPTIMAL JOY',
+    'intro.label.yourJoy': 'YOUR JOY',
+    'intro.label.usedTime':'Time used',
+    'intro.status.over':   '✗ over',
+    'intro.status.exact':  '✓ exact fit',
+    'intro.label.optimal': 'Optimal',
+    'intro.note.tieBreak.pre':  '※ Other combinations also reach ',
+    'intro.note.tieBreak.post': ' pts',
+    'intro.section1.title':'What did you just do?',
+    'intro.note.lead':     'Just by moving sliders, you did three things.',
+    'intro.q1.tag':        '1. What did you decide?',
+    'intro.q1.body':       'How many of each of the 4 dishes to make.',
+    'intro.q1.thisIs':     'This is the ',
+    'intro.q1.term':       'decision variables',
+    'intro.q2.tag':        '2. What did you maximize?',
+    'intro.q2.body':       'The total satisfaction.',
+    'intro.q2.thisIs':     'This is the ',
+    'intro.q2.term':       'objective function',
+    'intro.q3.tag':        '3. What did you respect?',
+    'intro.q3.body':       'The 20-minute budget and the per-dish max count.',
+    'intro.q3.thisIs':     'These are the ',
+    'intro.q3.term':       'constraints',
+    'intro.punct.period':  '.',
+    'intro.section2.title':"Optimization's job: turn these three into formulas",
+    'intro.s2.lead':       'In real life, "I want to choose well" usually fits these 3 building blocks.',
+    'intro.s2.bold.flow':  'variables → objective → constraints',
+    'intro.s2.write':      ' — write them in this order and hand them to the computer. From the next lesson on, we translate the three into actual ',
+    'intro.s2.bold.form':  'formulas',
+    'intro.s2.tail':       '.',
   },
 };
 
@@ -693,6 +787,7 @@ function bruteForceLunch() {
 }
 
 function IntroView() {
+  const { lang, t } = useContext(LangContext);
   const [qty, setQty] = useState([0, 0, 0, 0]);
   const [revealOpt, setRevealOpt] = useState(false);
 
@@ -709,6 +804,18 @@ function IntroView() {
     setRevealOpt(false);
   };
 
+  // 言語別フォーマッタ：日本語は全角括弧 + 数値直付け、英語は半角括弧 + スペース
+  const fmtSliderLabel = (i, d) => {
+    const name = t(`intro.dish.${i}`);
+    const min = t('intro.unit.min');
+    const pt = t('intro.unit.point');
+    return lang === 'ja'
+      ? `${name}（${d.time}${min} / +${d.joy}${pt}）`
+      : `${name} (${d.time} ${min} / +${d.joy} ${pt})`;
+  };
+  const fmtMin = (n) => (lang === 'ja' ? `${n}${t('intro.unit.min')}` : `${n} ${t('intro.unit.min')}`);
+  const fmtPt = (n) => (lang === 'ja' ? `${n}${t('intro.unit.point')}` : `${n} ${t('intro.unit.point')}`);
+
   // Lunch box SVG (2x2 compartments)
   const SW = 480, SH = 280, M = 20;
   const compW = (SW - 2 * M) / 2;
@@ -717,17 +824,17 @@ function IntroView() {
 
   return (
     <div>
-      <ModuleHeader kicker="LESSON 00" title="最適化って何？" subtitle="WHAT IS OPTIMIZATION?" accent={C.green} />
+      <ModuleHeader kicker="LESSON 00" title={t('intro.title')} subtitle="WHAT IS OPTIMIZATION?" accent={C.green} />
 
       <Story>
-        朝の20分で、お弁当を作る。<br />
-        おかずは4種類。それぞれ作るのにかかる時間と、おいしさ（満足度）が違う。<br />
-        時間内におさめながら、満足度がいちばん高くなる組み合わせを探そう。
+        {t('intro.story.line1')}<br />
+        {t('intro.story.line2')}<br />
+        {t('intro.story.line3')}
       </Story>
 
       <Card accent={C.green}>
-        <Blackboard label="LUNCH BOX / お弁当箱" style={{ marginBottom: '1rem' }}>
-          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label="お弁当箱：4つの仕切りに各おかずを個数分タイルで並べた図"
+        <Blackboard label={t('intro.blackboard')} style={{ marginBottom: '1rem' }}>
+          <svg viewBox={`0 0 ${SW} ${SH}`} role="img" aria-label={t('intro.svg.label')}
             style={{ width: '100%', height: 'auto', display: 'block' }}>
             {/* Outer box */}
             <rect x={M} y={M} width={SW - 2 * M} height={SH - 2 * M}
@@ -770,11 +877,11 @@ function IntroView() {
                 <g key={di}>
                   <text x={cx + 12} y={cy + 18}
                     style={{ fontFamily: F_DISP, fontSize: 13, fontWeight: 600, fill: dish.color }}>
-                    {dish.name}
+                    {t(`intro.dish.${di}`)}
                   </text>
                   <text x={cx + compW - 12} y={cy + 18} textAnchor="end"
                     style={{ fontFamily: F_MONO, fontSize: 10, fill: C.chalkSoft }}>
-                    {dish.time}分 / +{dish.joy}
+                    {fmtMin(dish.time)} / +{dish.joy}
                   </text>
                   {tiles}
                 </g>
@@ -786,23 +893,23 @@ function IntroView() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="md:col-span-2 space-y-3">
             <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.inkLight, letterSpacing: '0.1em' }}>
-              各おかずの個数を決める
+              {t('intro.label.qty')}
             </div>
             {DISHES.map((d, i) => (
               <Slider
                 key={d.id}
-                label={`${d.name}（${d.time}分 / +${d.joy}点）`}
+                label={fmtSliderLabel(i, d)}
                 value={display[i]}
                 onChange={(v) => setOne(i, v)}
                 min={0} max={d.max}
-                suffix=" 個"
+                suffix={t('intro.unit.piece')}
                 color={d.slider}
               />
             ))}
             <div className="flex gap-2 mt-3">
-              <Btn variant="ghost" size="sm" onClick={() => { setQty([0, 0, 0, 0]); setRevealOpt(false); }}>リセット</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => { setQty([0, 0, 0, 0]); setRevealOpt(false); }}>{t('intro.btn.reset')}</Btn>
               <Btn variant="primary" size="sm" onClick={() => setRevealOpt(!revealOpt)}>
-                {revealOpt ? '元に戻す' : '最適解を見る'}
+                {revealOpt ? t('intro.btn.revert') : t('intro.btn.showOpt')}
               </Btn>
             </div>
           </div>
@@ -813,7 +920,7 @@ function IntroView() {
             boxShadow: `inset 0 0 0 1px ${C.frameDark}`,
           }}>
             <div style={{ fontFamily: F_MONO, fontSize: 11, color: C.chalkSoft, letterSpacing: '0.15em' }}>
-              {revealOpt ? 'OPTIMAL JOY' : 'YOUR JOY'}
+              {revealOpt ? t('intro.label.optJoy') : t('intro.label.yourJoy')}
             </div>
             <div className="mt-1">
               <span style={{
@@ -822,66 +929,68 @@ function IntroView() {
               }}>
                 {over ? '—' : totalJoy}
               </span>
-              <span style={{ fontFamily: F_MONO, fontSize: 12, color: C.chalkSoft, marginLeft: 6 }}>点</span>
+              <span style={{ fontFamily: F_MONO, fontSize: 12, color: C.chalkSoft, marginLeft: 6 }}>{t('intro.unit.point')}</span>
             </div>
             <div style={{
               fontFamily: F_MONO, fontSize: 11,
               color: over ? C.chalkPink : C.chalkSoft, marginTop: 6,
             }}>
-              使った時間: {totalTime} / {TIME_BUDGET} 分{' '}
-              {over ? '✗ オーバー' : (totalTime === TIME_BUDGET ? '✓ ぴったり' : '')}
+              {t('intro.label.usedTime')}: {totalTime} / {fmtMin(TIME_BUDGET)}{' '}
+              {over ? t('intro.status.over') : (totalTime === TIME_BUDGET ? t('intro.status.exact') : '')}
             </div>
             <div style={{
               fontFamily: F_MONO, fontSize: 10, color: C.chalkSoft,
               marginTop: 12, paddingTop: 8, borderTop: `1px dashed ${C.chalkFaint}`, lineHeight: 1.6,
             }}>
-              最適: <b style={{ color: C.chalkYellow }}>{opt.joy}点</b>
+              {t('intro.label.optimal')}: <b style={{ color: C.chalkYellow }}>{fmtPt(opt.joy)}</b>
               <br />
-              {opt.qty.map((q, i) => q > 0 ? `${DISHES[i].name}×${q}` : null).filter(Boolean).join(' / ')}
+              {opt.qty.map((q, i) => q > 0 ? `${t(`intro.dish.${i}`)}×${q}` : null).filter(Boolean).join(' / ')}
               <div style={{ marginTop: 6, fontSize: 9, color: C.chalkSoft, fontStyle: 'italic' }}>
-                ※ 同じ {opt.joy} 点を出す組み合わせは他にもある
+                {t('intro.note.tieBreak.pre')}{opt.joy}{t('intro.note.tieBreak.post')}
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      <SectionTitle num="0.1">いま、何をやった？</SectionTitle>
+      <SectionTitle num="0.1">{t('intro.section1.title')}</SectionTitle>
       <NotePaper>
         <p style={{ fontFamily: F_DISP, fontSize: '1rem', lineHeight: 1.95, color: C.inkSoft }}>
-          スライダーを動かすだけで、3つのことをやっていた。
+          {t('intro.note.lead')}
         </p>
         <ul style={{ marginTop: 14, listStyle: 'none', padding: 0 }}>
           <li style={{ marginBottom: 16 }}>
-            <Tag bg={C.red} color={C.paperLight}>1. 何を決めた？</Tag>
+            <Tag bg={C.red} color={C.paperLight}>{t('intro.q1.tag')}</Tag>
             <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
-              4種類のおかずを「いくつ作るか」。<br />
-              これが <b style={{ color: C.red }}>決定変数</b>。
+              {t('intro.q1.body')}<br />
+              {t('intro.q1.thisIs')}<b style={{ color: C.red }}>{t('intro.q1.term')}</b>{t('intro.punct.period')}
             </div>
           </li>
           <li style={{ marginBottom: 16 }}>
-            <Tag bg={C.blue} color={C.paperLight}>2. 何を最大にした？</Tag>
+            <Tag bg={C.blue} color={C.paperLight}>{t('intro.q2.tag')}</Tag>
             <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
-              満足度の合計。<br />
-              これが <b style={{ color: C.blue }}>目的関数</b>。
+              {t('intro.q2.body')}<br />
+              {t('intro.q2.thisIs')}<b style={{ color: C.blue }}>{t('intro.q2.term')}</b>{t('intro.punct.period')}
             </div>
           </li>
           <li>
-            <Tag bg={C.yellow} color={C.paperLight}>3. 何を守った？</Tag>
+            <Tag bg={C.yellow} color={C.paperLight}>{t('intro.q3.tag')}</Tag>
             <div style={{ fontFamily: F_DISP, fontSize: 14, marginTop: 6, color: C.inkSoft, lineHeight: 1.8 }}>
-              「20分以内」と「各おかずの上限個数」。<br />
-              これが <b style={{ color: C.yellow }}>制約条件</b>。
+              {t('intro.q3.body')}<br />
+              {t('intro.q3.thisIs')}<b style={{ color: C.yellow }}>{t('intro.q3.term')}</b>{t('intro.punct.period')}
             </div>
           </li>
         </ul>
       </NotePaper>
 
-      <SectionTitle num="0.2">最適化の仕事は、この3つを式にすること</SectionTitle>
+      <SectionTitle num="0.2">{t('intro.section2.title')}</SectionTitle>
       <Card>
         <p style={{ fontFamily: F_BODY, fontSize: 14, color: C.inkSoft, lineHeight: 1.85 }}>
-          世の中の「うまく決めたい」という仕事は、たいていこの3点セットで書ける。
-          <b>変数 → 目的 → 制約</b> の順に書き出して、コンピュータに渡す。
-          次のレッスンからは、この3つを実際に <b>数式</b> に翻訳していく。
+          {t('intro.s2.lead')}
+          <b>{t('intro.s2.bold.flow')}</b>
+          {t('intro.s2.write')}
+          <b>{t('intro.s2.bold.form')}</b>
+          {t('intro.s2.tail')}
         </p>
       </Card>
     </div>
